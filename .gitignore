@@ -1,4 +1,45 @@
-vendor/
+# Dependencies
+/vendor/
 composer.json
 composer.lock
+
+# Database
 *.sqlite
+*.sqlite3
+*.db
+
+# IDE
+.idea/
+.vscode/
+*.sublime-*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Backup
+backups/
+*.bak
+*.backup
+
+# Temporary
+tmp/
+temp/
+*.tmp
+
+# Build
+build/
+dist/
+
+# Test
+.phpunit.result.cache
+phpunit.xml
