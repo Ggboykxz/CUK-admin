@@ -4,7 +4,7 @@ $filieres = db()->fetchAll("SELECT f.*, i.sigle as institut, i.nom as institut_n
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
-    
+
     if ($action === 'create_institut') {
         $data = [
             'code' => strtoupper(trim($_POST['code'])),
@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: ?page=filieres');
         exit;
     }
-    
+
     if ($action === 'create_filiere') {
         $data = [
             'code' => strtoupper(trim($_POST['code'])),
@@ -30,9 +30,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'credits_total' => intval($_POST['credits'] ?? 120)
         ];
         db()->insert('filieres', $data);
-        
+
         $filiereId = db()->fetch("SELECT id FROM filieres WHERE code = ?", [$data['code']])['id'];
-        
+
         for ($s = 1; $s <= 4; $s++) {
             db()->insert('semestres', [
                 'code' => $data['code'] . '-S' . $s,
@@ -42,17 +42,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'credits' => 30
             ]);
         }
-        
+
         $_SESSION['success'] = 'Filière DUT créée avec succès';
         header('Location: ?page=filieres');
         exit;
     }
-    
+
     if ($action === 'create_ue') {
         $filiereCode = db()->fetch("SELECT code FROM filieres WHERE id = ?", [intval($_POST['filiere_id'])])['code'];
         $semestre = intval($_POST['semestre']);
         $semestreData = db()->fetch("SELECT id FROM semestres WHERE code LIKE ? AND numero = ?", [$filiereCode . '%', $semestre]);
-        
+
         $data = [
             'code' => strtoupper(trim($_POST['code'])),
             'nom' => trim($_POST['nom']),
@@ -67,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: ?page=filieres');
         exit;
     }
-    
+
     if ($action === 'create_ec') {
         $data = [
             'code' => strtoupper(trim($_POST['code'])),
@@ -157,7 +157,7 @@ $ecs = db()->fetchAll("SELECT ec.*, ue.nom as ue_nom, ue.code as ue_code
             </div>
 
             <div class="row">
-                <?php foreach ($instituts as $inst): ?>
+                <?php foreach ($instituts as $inst) : ?>
                 <div class="col-md-6 mb-4">
                     <div class="card h-100">
                         <div class="card-header bg-<?= $inst['sigle'] === 'ISTPK' ? 'primary' : 'info' ?> text-white">
@@ -169,10 +169,10 @@ $ecs = db()->fetchAll("SELECT ec.*, ue.nom as ue_nom, ue.code as ue_code
                             <hr>
                             <h6>Filières DUT:</h6>
                             <ul>
-                                <?php 
+                                <?php
                                 $filieresInst = array_filter($filieres, fn($f) => $f['institut_id'] == $inst['id']);
-                                foreach ($filieresInst as $f): 
-                                ?>
+                                foreach ($filieresInst as $f) :
+                                    ?>
                                 <li><?= htmlspecialchars($f['nom']) ?></li>
                                 <?php endforeach; ?>
                             </ul>
@@ -207,7 +207,7 @@ $ecs = db()->fetchAll("SELECT ec.*, ue.nom as ue_nom, ue.code as ue_code
                             <label class="form-label">Institut *</label>
                             <select class="form-select" name="institut_id" required>
                                 <option value="">Sélectionner...</option>
-                                <?php foreach ($instituts as $inst): ?>
+                                <?php foreach ($instituts as $inst) : ?>
                                     <option value="<?= $inst['id'] ?>"><?= htmlspecialchars($inst['sigle']) ?></option>
                                 <?php endforeach; ?>
                             </select>
@@ -239,7 +239,7 @@ $ecs = db()->fetchAll("SELECT ec.*, ue.nom as ue_nom, ue.code as ue_code
                             <tr><th>Institut</th><th>Code</th><th>Filière DUT</th><th>Durée</th><th>Crédits</th></tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($filieres as $f): ?>
+                            <?php foreach ($filieres as $f) : ?>
                             <tr>
                                 <td><span class="badge bg-<?= $f['institut'] === 'ISTPK' ? 'primary' : 'info' ?>"><?= htmlspecialchars($f['institut']) ?></span></td>
                                 <td><strong><?= htmlspecialchars($f['code']) ?></strong></td>
@@ -272,7 +272,7 @@ $ecs = db()->fetchAll("SELECT ec.*, ue.nom as ue_nom, ue.code as ue_code
                             <label class="form-label">Filière DUT *</label>
                             <select class="form-select" name="filiere_id" id="ueFiliere" required>
                                 <option value="">Sélectionner...</option>
-                                <?php foreach ($filieres as $f): ?>
+                                <?php foreach ($filieres as $f) : ?>
                                     <option value="<?= $f['id'] ?>"><?= htmlspecialchars($f['code'] . ' - ' . $f['nom']) ?></option>
                                 <?php endforeach; ?>
                             </select>
@@ -315,7 +315,7 @@ $ecs = db()->fetchAll("SELECT ec.*, ue.nom as ue_nom, ue.code as ue_code
                             <tr><th>Code</th><th>UE</th><th>Filière</th><th>Semestre</th><th>Crédits</th></tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($ues as $ue): ?>
+                            <?php foreach ($ues as $ue) : ?>
                             <tr>
                                 <td><strong><?= htmlspecialchars($ue['code']) ?></strong></td>
                                 <td><?= htmlspecialchars($ue['nom']) ?></td>
@@ -348,7 +348,7 @@ $ecs = db()->fetchAll("SELECT ec.*, ue.nom as ue_nom, ue.code as ue_code
                             <label class="form-label">UE parente *</label>
                             <select class="form-select" name="ue_id" required>
                                 <option value="">Sélectionner...</option>
-                                <?php foreach ($ues as $ue): ?>
+                                <?php foreach ($ues as $ue) : ?>
                                     <option value="<?= $ue['id'] ?>"><?= htmlspecialchars($ue['code'] . ' - ' . $ue['nom']) ?></option>
                                 <?php endforeach; ?>
                             </select>
@@ -393,7 +393,7 @@ $ecs = db()->fetchAll("SELECT ec.*, ue.nom as ue_nom, ue.code as ue_code
                             <tr><th>Code</th><th>EC</th><th>UE</th><th>Coef.</th><th>Type</th></tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($ecs as $ec): ?>
+                            <?php foreach ($ecs as $ec) : ?>
                             <tr>
                                 <td><strong><?= htmlspecialchars($ec['code']) ?></strong></td>
                                 <td><?= htmlspecialchars($ec['nom']) ?></td>

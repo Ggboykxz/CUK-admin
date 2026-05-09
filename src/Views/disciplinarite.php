@@ -4,7 +4,7 @@ $etudiants = db()->fetchAll("SELECT id, numero, nom, prenom FROM etudiants WHERE
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
-    
+
     if ($action === 'ajouter') {
         $data = [
             'etudiant_id' => intval($_POST['etudiant_id']),
@@ -19,9 +19,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'sanction' => trim($_POST['sanction'] ?? ''),
             'statut' => 'en_cours'
         ];
-        
+
         db()->insert('incidents', $data);
-        
+
         $etudiant = db()->fetch("SELECT nom, prenom FROM etudiants WHERE id = ?", [$data['etudiant_id']]);
         db()->insert('journal_activite', [
             'user_id' => $_SESSION['user_id'],
@@ -29,12 +29,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'details' => "Incident pour {$etudiant['prenom']} {$etudiant['nom']} - {$data['type']}",
             'ip_address' => $_SERVER['REMOTE_ADDR'] ?? ''
         ]);
-        
+
         $_SESSION['success'] = 'Incident enregistré';
         header('Location: ?page=disciplinarite');
         exit;
     }
-    
+
     if ($action === 'traiter') {
         db()->update('incidents', [
             'mesures' => trim($_POST['mesures']),
@@ -42,12 +42,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'date_mesures' => date('Y-m-d'),
             'statut' => 'traite'
         ], 'id = :id', ['id' => intval($_POST['id'])]);
-        
+
         $_SESSION['success'] = 'Incident traité';
         header('Location: ?page=disciplinarite');
         exit;
     }
-    
+
     if ($action === 'cloturer') {
         db()->update('incidents', ['statut' => 'cloture'], 'id = :id', ['id' => intval($_POST['id'])]);
         $_SESSION['success'] = 'Incident clôturé';
@@ -115,7 +115,7 @@ $statsIncidents = [
                     <label class="form-label">Étudiant *</label>
                     <select class="form-select" name="etudiant_id" required>
                         <option value="">Sélectionner...</option>
-                        <?php foreach ($etudiants as $e): ?>
+                        <?php foreach ($etudiants as $e) : ?>
                             <option value="<?= $e['id'] ?>"><?= htmlspecialchars($e['nom'] . ' ' . $e['prenom'] . ' (' . $e['numero'] . ')') ?></option>
                         <?php endforeach; ?>
                     </select>
@@ -184,7 +184,7 @@ $statsIncidents = [
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($incidents as $i): ?>
+                    <?php foreach ($incidents as $i) : ?>
                     <tr class="<?= $i['gravite'] === 'grave' ? 'table-danger' : ($i['gravite'] === 'majeur' ? 'table-warning' : '') ?>">
                         <td><?= date('d/m/Y', strtotime($i['date_incident'])) ?></td>
                         <td>
@@ -214,12 +214,12 @@ $statsIncidents = [
                                 <button class="btn btn-outline-primary" onclick="viewIncident(<?= $i['id'] ?>)">
                                     <i class="bi bi-eye"></i>
                                 </button>
-                                <?php if ($i['statut'] !== 'traite'): ?>
+                                <?php if ($i['statut'] !== 'traite') : ?>
                                 <button class="btn btn-outline-success" onclick="traiterIncident(<?= $i['id'] ?>)">
                                     <i class="bi bi-check-lg"></i>
                                 </button>
                                 <?php endif; ?>
-                                <?php if ($i['statut'] === 'traite'): ?>
+                                <?php if ($i['statut'] === 'traite') : ?>
                                 <button class="btn btn-outline-secondary" onclick="cloturerIncident(<?= $i['id'] ?>)">
                                     <i class="bi bi-check-all"></i>
                                 </button>

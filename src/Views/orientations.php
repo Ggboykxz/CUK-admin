@@ -6,7 +6,7 @@ $etudiants = db()->fetchAll("SELECT id, numero, nom, prenom FROM etudiants WHERE
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
-    
+
     if ($action === 'creer') {
         $data = [
             'etudiant_id' => intval($_POST['etudiant_id']),
@@ -21,31 +21,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'utilisateur_id' => $_SESSION['user_id'],
             'observation' => trim($_POST['observation'] ?? '')
         ];
-        
+
         if (!empty($_POST['filiere_origine_id'])) {
             $data['filiere_origine_id'] = intval($_POST['filiere_origine_id']);
         }
         if (!empty($_POST['niveau_origine_id'])) {
             $data['niveau_origine_id'] = intval($_POST['niveau_origine_id']);
         }
-        
+
         db()->insert('orientations', $data);
         $_SESSION['success'] = 'Orientation enregistrée';
         header('Location: ?page=orientations');
         exit;
     }
-    
+
     if ($action === 'decider') {
         $id = intval($_POST['id']);
         $decision = $_POST['decision'];
-        
+
         db()->update('orientations', [
             'decision' => $decision,
             'avis_conseil' => trim($_POST['avis_conseil'] ?? ''),
             'date_decision' => date('Y-m-d'),
             'observation' => trim($_POST['observation'] ?? '')
         ], 'id = :id', ['id' => $id]);
-        
+
         if ($decision === 'accepte') {
             $orientation = db()->fetch("SELECT * FROM orientations WHERE id = ?", [$id]);
             db()->update('etudiants', [
@@ -54,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'statut' => 'actif'
             ], 'id = :id', ['id' => $orientation['etudiant_id']]);
         }
-        
+
         $_SESSION['success'] = 'Décision enregistrée';
         header('Location: ?page=orientations');
         exit;
@@ -97,7 +97,7 @@ $orientations = db()->fetchAll("
                     <label class="form-label">Étudiant *</label>
                     <select class="form-select" name="etudiant_id" required>
                         <option value="">Sélectionner...</option>
-                        <?php foreach ($etudiants as $e): ?>
+                        <?php foreach ($etudiants as $e) : ?>
                             <option value="<?= $e['id'] ?>"><?= htmlspecialchars($e['nom'] . ' ' . $e['prenom'] . ' (' . $e['numero'] . ')') ?></option>
                         <?php endforeach; ?>
                     </select>
@@ -115,7 +115,7 @@ $orientations = db()->fetchAll("
                     <label class="form-label">Filière cible *</label>
                     <select class="form-select" name="filiere_cible_id" required>
                         <option value="">Sélectionner...</option>
-                        <?php foreach ($filieres as $f): ?>
+                        <?php foreach ($filieres as $f) : ?>
                             <option value="<?= $f['id'] ?>"><?= htmlspecialchars($f['nom']) ?></option>
                         <?php endforeach; ?>
                     </select>
@@ -124,7 +124,7 @@ $orientations = db()->fetchAll("
                     <label class="form-label">Niveau cible *</label>
                     <select class="form-select" name="niveau_cible_id" required>
                         <option value="">Sélectionner...</option>
-                        <?php foreach ($niveaux as $n): ?>
+                        <?php foreach ($niveaux as $n) : ?>
                             <option value="<?= $n['id'] ?>"><?= htmlspecialchars($n['nom']) ?></option>
                         <?php endforeach; ?>
                     </select>
@@ -168,7 +168,7 @@ $orientations = db()->fetchAll("
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($orientations as $o): ?>
+                    <?php foreach ($orientations as $o) : ?>
                     <tr>
                         <td>
                             <strong><?= htmlspecialchars($o['prenom'] . ' ' . $o['nom']) ?></strong>
@@ -187,7 +187,7 @@ $orientations = db()->fetchAll("
                         </td>
                         <td>
                             <?= htmlspecialchars($o['mention'] ?: '-') ?>
-                            <?php if ($o['rang']): ?>
+                            <?php if ($o['rang']) : ?>
                                 <small class="d-block text-muted">Rang: <?= $o['rang'] ?></small>
                             <?php endif; ?>
                         </td>
@@ -197,7 +197,7 @@ $orientations = db()->fetchAll("
                             </span>
                         </td>
                         <td>
-                            <?php if ($o['decision'] === 'en_attente'): ?>
+                            <?php if ($o['decision'] === 'en_attente') : ?>
                             <button class="btn btn-sm btn-outline-success" onclick="deciderOrientation(<?= $o['id'] ?>)">
                                 <i class="bi bi-check"></i> Décider
                             </button>

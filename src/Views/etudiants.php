@@ -17,11 +17,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'get') {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
-    
+
     if ($action === 'create') {
         $numero = 'ETU-' . date('Y') . '-' . str_pad(db()->fetch("SELECT COUNT(*)+1 as count FROM etudiants")['count'], 3, '0', STR_PAD_LEFT);
         $matricule = 'MAT-' . date('Y') . '-' . substr(md5(uniqid()), 0, 6);
-        
+
         $data = [
             'numero' => $numero,
             'matricule' => $matricule,
@@ -41,9 +41,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'boursier' => isset($_POST['boursier']) ? 1 : 0,
             'statut' => 'actif'
         ];
-        
+
         $id = db()->insert('etudiants', $data);
-        
+
         db()->insert('journal_activite', [
             'user_id' => $_SESSION['user_id'],
             'action' => 'create_etudiant',
@@ -52,12 +52,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'details' => "Nouvel étudiant: {$data['prenom']} {$data['nom']}",
             'ip_address' => $_SERVER['REMOTE_ADDR'] ?? ''
         ]);
-        
+
         $_SESSION['success'] = 'Étudiant enregistré avec succès';
         header('Location: ?page=etudiants');
         exit;
     }
-    
+
     if ($action === 'update') {
         $id = intval($_POST['id']);
         $data = [
@@ -76,13 +76,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'statut' => $_POST['statut'] ?? 'actif',
             'observation' => trim($_POST['observation'] ?? '')
         ];
-        
+
         db()->update('etudiants', $data, 'id = :id', ['id' => $id]);
         $_SESSION['success'] = 'Étudiant modifié avec succès';
         header('Location: ?page=etudiants');
         exit;
     }
-    
+
     if ($action === 'delete') {
         $id = intval($_POST['id']);
         db()->delete('etudiants', 'id = :id', ['id' => $id]);
@@ -114,13 +114,13 @@ $etudiants = db()->fetchAll("
         <div class="filters">
             <select class="form-select" id="filterInstitut">
                 <option value="">Tous les Instituts</option>
-                <?php foreach ($instituts as $inst): ?>
+                <?php foreach ($instituts as $inst) : ?>
                     <option value="<?= $inst['id'] ?>"><?= htmlspecialchars($inst['sigle'] . ' - ' . $inst['nom']) ?></option>
                 <?php endforeach; ?>
             </select>
             <select class="form-select" id="filterFiliere">
                 <option value="">Toutes les Filières DUT</option>
-                <?php foreach ($filieres as $f): ?>
+                <?php foreach ($filieres as $f) : ?>
                     <option value="<?= $f['id'] ?>"><?= htmlspecialchars($f['nom']) ?></option>
                 <?php endforeach; ?>
             </select>
@@ -140,7 +140,7 @@ $etudiants = db()->fetchAll("
                 <option value="redoublant">Redoublant</option>
             </select>
         </div>
-        <?php if ($_SESSION['user_role'] !== 'professeur'): ?>
+        <?php if ($_SESSION['user_role'] !== 'professeur') : ?>
         <button class="btn btn-primary" onclick="openModal('etudiant', 'create')">
             <i class="bi bi-plus-circle"></i> Nouvel Étudiant
         </button>
@@ -162,7 +162,7 @@ $etudiants = db()->fetchAll("
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($etudiants as $e): ?>
+                    <?php foreach ($etudiants as $e) : ?>
                     <tr data-filiere="<?= $e['filiere_id'] ?>" data-semestre="<?= $e['semestre'] ?>" data-statut="<?= $e['statut'] ?>">
                         <td><strong><?= htmlspecialchars($e['numero']) ?></strong></td>
                         <td>
@@ -193,7 +193,7 @@ $etudiants = db()->fetchAll("
                                 <button class="btn btn-outline-primary" onclick="viewEtudiant(<?= $e['id'] ?>)" title="Voir">
                                     <i class="bi bi-eye"></i>
                                 </button>
-                                <?php if ($_SESSION['user_role'] !== 'professeur'): ?>
+                                <?php if ($_SESSION['user_role'] !== 'professeur') : ?>
                                 <button class="btn btn-outline-secondary" onclick="openModal('etudiant', 'edit', <?= $e['id'] ?>)" title="Modifier">
                                     <i class="bi bi-pencil"></i>
                                 </button>
@@ -266,7 +266,7 @@ $etudiants = db()->fetchAll("
                         <label class="form-label">Institut *</label>
                         <select class="form-select" id="institutSelect" required>
                             <option value="">Sélectionner...</option>
-                            <?php foreach ($instituts as $inst): ?>
+                            <?php foreach ($instituts as $inst) : ?>
                                 <option value="<?= $inst['id'] ?>"><?= htmlspecialchars($inst['sigle'] . ' - ' . $inst['nom']) ?></option>
                             <?php endforeach; ?>
                         </select>

@@ -91,7 +91,7 @@ $absencesRecentes = db()->fetchAll("
                 </div>
                 <div class="card-body">
                     <div class="row text-center">
-                        <?php foreach ($statsParInstitut as $inst): ?>
+                        <?php foreach ($statsParInstitut as $inst) : ?>
                         <div class="col-md-6 mb-3">
                             <div class="p-3 border rounded">
                                 <h4 class="mb-1"><?= $inst['count'] ?></h4>
@@ -111,11 +111,11 @@ $absencesRecentes = db()->fetchAll("
             <div class="card">
                 <div class="card-header"><h5><i class="bi bi-calendar-x"></i> Absences Récentes</h5></div>
                 <div class="card-body p-0">
-                    <?php if (empty($absencesRecentes)): ?>
+                    <?php if (empty($absencesRecentes)) : ?>
                         <div class="empty-state"><i class="bi bi-check-circle"></i><p>Aucune absence récente</p></div>
-                    <?php else: ?>
+                    <?php else : ?>
                         <ul class="list-group list-group-flush">
-                            <?php foreach ($absencesRecentes as $absence): ?>
+                            <?php foreach ($absencesRecentes as $absence) : ?>
                                 <li class="list-group-item">
                                     <div class="d-flex justify-content-between">
                                         <strong><?= htmlspecialchars($absence['prenom'] . ' ' . $absence['nom']) ?></strong>
@@ -141,9 +141,9 @@ $absencesRecentes = db()->fetchAll("
                     <a href="?page=etudiants" class="btn btn-sm btn-outline-primary">Voir tout</a>
                 </div>
                 <div class="card-body p-0">
-                    <?php if (empty($etudiantsRecents)): ?>
+                    <?php if (empty($etudiantsRecents)) : ?>
                         <div class="empty-state"><i class="bi bi-people"></i><p>Aucune inscription récente</p></div>
-                    <?php else: ?>
+                    <?php else : ?>
                         <div class="table-responsive">
                             <table class="table table-hover mb-0">
                                 <thead>
@@ -156,7 +156,7 @@ $absencesRecentes = db()->fetchAll("
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($etudiantsRecents as $etudiant): ?>
+                                    <?php foreach ($etudiantsRecents as $etudiant) : ?>
                                         <tr>
                                             <td><strong><?= htmlspecialchars($etudiant['prenom'] . ' ' . $etudiant['nom']) ?></strong></td>
                                             <td><span class="badge bg-<?= $etudiant['institut'] === 'ISTPK' ? 'primary' : 'info' ?>"><?= htmlspecialchars($etudiant['institut']) ?></span></td>

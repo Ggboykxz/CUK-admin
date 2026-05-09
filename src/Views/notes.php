@@ -4,7 +4,7 @@ $filieres = db()->fetchAll("SELECT f.*, i.sigle as institut FROM filieres f JOIN
 
 if (isset($_POST['action'])) {
     $action = $_POST['action'];
-    
+
     if ($action === 'saveNote') {
         header('Content-Type: application/json');
         $etudiantId = intval($_POST['etudiant_id']);
@@ -13,9 +13,9 @@ if (isset($_POST['action'])) {
         $cc = $_POST['cc'] !== '' ? floatval($_POST['cc']) : null;
         $tp = $_POST['tp'] !== '' ? floatval($_POST['tp']) : null;
         $examen = $_POST['examen'] !== '' ? floatval($_POST['examen']) : null;
-        
+
         $ec = db()->fetch("SELECT * FROM ecs WHERE id = ?", [$ecId]);
-        
+
         $moyenneEc = null;
         if ($cc !== null && $tp !== null && $examen !== null) {
             $totalCoef = $ec['coefficient_cc'] + $ec['coefficient_tp'] + $ec['coefficient_examen'];
@@ -25,12 +25,12 @@ if (isset($_POST['action'])) {
         } elseif ($examen !== null) {
             $moyenneEc = $examen;
         }
-        
+
         $existing = db()->fetch(
             "SELECT id FROM notes WHERE etudiant_id = ? AND ec_id = ? AND annee_academique_id = ?",
             [$etudiantId, $ecId, $anneeId]
         );
-        
+
         $data = [
             'etudiant_id' => $etudiantId,
             'ec_id' => $ecId,
@@ -41,65 +41,65 @@ if (isset($_POST['action'])) {
             'moyenne_ec' => $moyenneEc,
             'saisi_par' => $_SESSION['user_id']
         ];
-        
+
         if ($existing) {
             db()->update('notes', $data, 'id = :id', ['id' => $existing['id']]);
         } else {
             db()->insert('notes', $data);
         }
-        
+
         echo json_encode(['success' => true, 'moyenne' => $moyenneEc]);
         exit;
     }
-    
+
     if ($action === 'calculerSemestre') {
         header('Content-Type: application/json');
         $etudiantId = intval($_POST['etudiant_id']);
         $anneeId = intval($_POST['annee_academique_id']);
         $semestre = $_POST['semestre'];
         $filiereId = intval($_POST['filiere_id']);
-        
+
         $semestreData = db()->fetch("SELECT * FROM semestres WHERE code LIKE ? AND filiere_id = ?", [$filiereId . '-' . $semestre . '%', $filiereId]);
-        
+
         if (!$semestreData) {
             echo json_encode(['success' => false, 'error' => 'Semestre non trouvé']);
             exit;
         }
-        
+
         $ues = db()->fetchAll("SELECT * FROM ues WHERE semestre_id = ? AND active = 1", [$semestreData['id']]);
         $resultats = [];
         $totalMoyenne = 0;
         $totalCredits = 0;
         $totalCreditsUE = 0;
-        
+
         foreach ($ues as $ue) {
             $ecs = db()->fetchAll("SELECT * FROM ecs WHERE ue_id = ? AND active = 1", [$ue['id']]);
             $moyenneUe = 0;
             $totalCoefUe = 0;
             $creditsUe = 0;
-            
+
             foreach ($ecs as $ec) {
                 $note = db()->fetch(
                     "SELECT * FROM notes WHERE etudiant_id = ? AND ec_id = ? AND annee_academique_id = ?",
                     [$etudiantId, $ec['id'], $anneeId]
                 );
-                
+
                 if ($note && $note['moyenne_ec'] !== null) {
                     $moyenneUe += floatval($note['moyenne_ec']) * floatval($ec['coefficient']);
                     $totalCoefUe += floatval($ec['coefficient']);
                     $creditsUe += floatval($ec['coefficient']);
                 }
             }
-            
+
             $moyenneUeFinale = $totalCoefUe > 0 ? round($moyenneUe / $totalCoefUe, 2) : null;
             $valid = $moyenneUeFinale !== null && $moyenneUeFinale >= 10;
-            
+
             if ($moyenneUeFinale !== null) {
                 $totalMoyenne += $moyenneUe;
                 $totalCredits += $creditsUe;
                 $totalCreditsUE += floatval($ue['credits']);
             }
-            
+
             $resultats[] = [
                 'ue' => $ue,
                 'moyenne' => $moyenneUeFinale,
@@ -108,11 +108,11 @@ if (isset($_POST['action'])) {
                 'valide' => $valid
             ];
         }
-        
+
         $moyenneSemestre = $totalCreditsUE > 0 ? round($totalMoyenne / $totalCreditsUE, 2) : null;
         $mention = getMention($moyenneSemestre);
         $decision = getDecision($moyenneSemestre, $moyenneSemestre !== null);
-        
+
         echo json_encode([
             'success' => true,
             'resultats' => $resultats,
@@ -126,19 +126,37 @@ if (isset($_POST['action'])) {
     }
 }
 
-function getMention($moyenne) {
-    if ($moyenne === null) return '-';
-    if ($moyenne >= 18) return 'Excellent';
-    if ($moyenne >= 16) return 'Très Bien';
-    if ($moyenne >= 14) return 'Bien';
-    if ($moyenne >= 12) return 'Assez Bien';
-    if ($moyenne >= 10) return 'Passable';
+function getMention($moyenne)
+{
+    if ($moyenne === null) {
+        return '-';
+    }
+    if ($moyenne >= 18) {
+        return 'Excellent';
+    }
+    if ($moyenne >= 16) {
+        return 'Très Bien';
+    }
+    if ($moyenne >= 14) {
+        return 'Bien';
+    }
+    if ($moyenne >= 12) {
+        return 'Assez Bien';
+    }
+    if ($moyenne >= 10) {
+        return 'Passable';
+    }
     return 'Ajourné';
 }
 
-function getDecision($moyenne, $hasNotes) {
-    if (!$hasNotes || $moyenne === null) return 'en_attente';
-    if ($moyenne >= 10) return 'admis';
+function getDecision($moyenne, $hasNotes)
+{
+    if (!$hasNotes || $moyenne === null) {
+        return 'en_attente';
+    }
+    if ($moyenne >= 10) {
+        return 'admis';
+    }
     return 'ajourne';
 }
 
@@ -162,7 +180,7 @@ $etudiants = db()->fetchAll("
                     <label class="form-label">Étudiant</label>
                     <select class="form-select" id="etudiantSelect" required>
                         <option value="">Sélectionner...</option>
-                        <?php foreach ($etudiants as $e): ?>
+                        <?php foreach ($etudiants as $e) : ?>
                             <option value="<?= $e['id'] ?>" data-filiere="<?= $e['filiere_id'] ?>" data-semestre="<?= $e['semestre'] ?>">
                                 <?= htmlspecialchars($e['nom'] . ' ' . $e['prenom'] . ' (' . $e['numero'] . ')') ?>
                             </option>

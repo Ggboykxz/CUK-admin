@@ -14,9 +14,9 @@ if (isset($_POST['action'])) {
             'motif' => trim($_POST['motif'] ?? ''),
             'saisi_par' => $_SESSION['user_id']
         ];
-        
+
         db()->insert('absences', $data);
-        
+
         $etudiant = db()->fetch("SELECT nom, prenom FROM etudiants WHERE id = ?", [$data['etudiant_id']]);
         db()->insert('journal_activite', [
             'user_id' => $_SESSION['user_id'],
@@ -25,23 +25,23 @@ if (isset($_POST['action'])) {
             'details' => "Absence pour {$etudiant['prenom']} {$etudiant['nom']}",
             'ip_address' => $_SERVER['REMOTE_ADDR'] ?? ''
         ]);
-        
+
         $_SESSION['success'] = 'Absence enregistrée avec succès';
         header('Location: ?page=absences');
         exit;
     }
-    
+
     if ($_POST['action'] === 'justifier') {
         db()->update('absences', [
             'justifiee' => 1,
             'motif' => trim($_POST['motif'] ?? '')
         ], 'id = :id', ['id' => intval($_POST['id'])]);
-        
+
         $_SESSION['success'] = 'Absence justifiée';
         header('Location: ?page=absences');
         exit;
     }
-    
+
     if ($_POST['action'] === 'supprimer') {
         db()->delete('absences', 'id = :id', ['id' => intval($_POST['id'])]);
         $_SESSION['success'] = 'Absence supprimée';
@@ -115,7 +115,7 @@ $statsAbsences = [
                     <label class="form-label">Étudiant *</label>
                     <select class="form-select" name="etudiant_id" required>
                         <option value="">Sélectionner...</option>
-                        <?php foreach ($etudiants as $e): ?>
+                        <?php foreach ($etudiants as $e) : ?>
                             <option value="<?= $e['id'] ?>"><?= htmlspecialchars($e['nom'] . ' ' . $e['prenom'] . ' (' . $e['numero'] . ')') ?></option>
                         <?php endforeach; ?>
                     </select>
@@ -164,7 +164,7 @@ $statsAbsences = [
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($absences as $a): ?>
+                    <?php foreach ($absences as $a) : ?>
                     <tr>
                         <td><?= date('d/m/Y', strtotime($a['date_absence'])) ?></td>
                         <td>
@@ -174,18 +174,18 @@ $statsAbsences = [
                         <td><?= htmlspecialchars($a['filiere']) ?></td>
                         <td><?= $a['nombre_heures'] ?>h</td>
                         <td>
-                            <?php if ($a['justifiee']): ?>
+                            <?php if ($a['justifiee']) : ?>
                                 <span class="badge bg-success">Justifiée</span>
-                                <?php if ($a['motif']): ?>
+                                <?php if ($a['motif']) : ?>
                                     <small class="d-block text-muted"><?= htmlspecialchars($a['motif']) ?></small>
                                 <?php endif; ?>
-                            <?php else: ?>
+                            <?php else : ?>
                                 <span class="badge bg-danger">Non justifiée</span>
                             <?php endif; ?>
                         </td>
                         <td>
                             <div class="btn-group btn-group-sm">
-                                <?php if (!$a['justifiee']): ?>
+                                <?php if (!$a['justifiee']) : ?>
                                 <button class="btn btn-outline-success" onclick="justifierAbsence(<?= $a['id'] ?>)" title="Justifier">
                                     <i class="bi bi-check-lg"></i>
                                 </button>

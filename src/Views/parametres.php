@@ -6,23 +6,23 @@ if ($_SESSION['user_role'] !== 'root' && $_SESSION['user_role'] !== 'administrat
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
-    
+
     if ($action === 'update_param') {
         $cle = $_POST['cle'];
         $valeur = $_POST['valeur'];
-        
+
         $existing = db()->fetch("SELECT id FROM parametres WHERE cle = ?", [$cle]);
         if ($existing) {
             db()->update('parametres', ['valeur' => $valeur], 'cle = :cle', ['cle' => $cle]);
         } else {
             db()->insert('parametres', ['cle' => $cle, 'valeur' => $valeur, 'categorie' => 'general']);
         }
-        
+
         $_SESSION['success'] = 'Paramètre mis à jour';
         header('Location: ?page=parametres');
         exit;
     }
-    
+
     if ($action === 'create_annee') {
         db()->insert('annees_academiques', [
             'annee' => $_POST['annee'],
@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: ?page=parametres');
         exit;
     }
-    
+
     if ($action === 'backup') {
         $_SESSION['success'] = 'Backup créé avec succès';
         header('Location: ?page=parametres');
@@ -194,17 +194,17 @@ foreach ($parametres as $p) {
                             <tr><th>Année</th><th>Début</th><th>Fin</th><th>Statut</th></tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($annees as $a): ?>
+                            <?php foreach ($annees as $a) : ?>
                             <tr>
                                 <td><strong><?= htmlspecialchars($a['annee']) ?></strong></td>
                                 <td><?= date('d/m/Y', strtotime($a['debut'])) ?></td>
                                 <td><?= date('d/m/Y', strtotime($a['fin'])) ?></td>
                                 <td>
-                                    <?php if ($a['courante']): ?>
+                                    <?php if ($a['courante']) : ?>
                                         <span class="badge bg-success">Courante</span>
-                                    <?php elseif ($a['active']): ?>
+                                    <?php elseif ($a['active']) : ?>
                                         <span class="badge bg-secondary">Active</span>
-                                    <?php else: ?>
+                                    <?php else : ?>
                                         <span class="badge bg-dark">Archivée</span>
                                     <?php endif; ?>
                                 </td>

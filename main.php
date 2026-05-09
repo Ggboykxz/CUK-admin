@@ -47,9 +47,9 @@ $currentYear = db()->fetch("SELECT * FROM annees_academiques WHERE courante = 1"
 </head>
 <body>
     <div class="app-container">
-        <?php if (!isset($_SESSION['user_id'])): ?>
+        <?php if (!isset($_SESSION['user_id'])) : ?>
             <?php include __DIR__ . '/src/Views/login.php'; ?>
-        <?php else: ?>
+        <?php else : ?>
             <aside class="sidebar">
                 <div class="sidebar-header">
                     <div class="logo">
@@ -93,7 +93,7 @@ $currentYear = db()->fetch("SELECT * FROM annees_academiques WHERE courante = 1"
                         <i class="bi bi-file-earmark-bar-graph"></i>
                         <span>Rapports</span>
                     </a>
-                    <?php if ($_SESSION['user_role'] === 'root' || $_SESSION['user_role'] === 'administrateur'): ?>
+                    <?php if ($_SESSION['user_role'] === 'root' || $_SESSION['user_role'] === 'administrateur') : ?>
                     <a href="?page=utilisateurs" class="nav-item" data-page="utilisateurs">
                         <i class="bi bi-person-badge"></i>
                         <span>Utilisateurs</span>
@@ -124,7 +124,7 @@ $currentYear = db()->fetch("SELECT * FROM annees_academiques WHERE courante = 1"
                 <header class="top-bar">
                     <div class="top-bar-left">
                         <h1 class="page-title">Tableau de bord</h1>
-                        <?php if ($currentYear): ?>
+                        <?php if ($currentYear) : ?>
                         <span class="annee-academique">
                             <i class="bi bi-calendar3"></i>
                             <?= htmlspecialchars($currentYear['annee']) ?>
@@ -154,7 +154,7 @@ $currentYear = db()->fetch("SELECT * FROM annees_academiques WHERE courante = 1"
                     <?php
                     $page = $_GET['page'] ?? 'dashboard';
                     $allowedPages = ['dashboard', 'etudiants', 'notes', 'absences', 'filieres', 'disciplinarite', 'orientations', 'rapports', 'utilisateurs', 'parametres'];
-                    
+
                     if (in_array($page, $allowedPages)) {
                         if (file_exists(__DIR__ . '/src/Views/' . $page . '.php')) {
                             include __DIR__ . '/src/Views/' . $page . '.php';

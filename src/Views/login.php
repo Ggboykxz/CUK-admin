@@ -6,7 +6,7 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
-    
+
     if (empty($username) || empty($password)) {
         $error = 'Veuillez remplir tous les champs';
     } else {
@@ -14,26 +14,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             "SELECT * FROM users WHERE username = :username AND actif = 1",
             ['username' => $username]
         );
-        
+
         if ($user && password_verify($password, $user['password_hash'])) {
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['user_role'] = $user['role'];
             $_SESSION['user_nom'] = $user['nom'];
             $_SESSION['user_prenom'] = $user['prenom'];
-            
-            db()->update('users', 
+
+            db()->update(
+                'users',
                 ['derniere_connexion' => date('Y-m-d H:i:s')],
                 'id = :id',
                 ['id' => $user['id']]
             );
-            
+
             db()->insert('journal_activite', [
                 'user_id' => $user['id'],
                 'action' => 'connexion',
                 'details' => 'Connexion réussie',
                 'ip_address' => $_SERVER['REMOTE_ADDR'] ?? ''
             ]);
-            
+
             header('Location: index.php');
             exit;
         } else {
@@ -53,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         
         <form method="POST" class="login-form">
-            <?php if ($error): ?>
+            <?php if ($error) : ?>
                 <div class="alert alert-danger">
                     <i class="bi bi-exclamation-triangle"></i>
                     <?= htmlspecialchars($error) ?>

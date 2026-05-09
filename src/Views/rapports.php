@@ -40,7 +40,7 @@ $evolutionNotes = db()->fetchAll("
                     <label class="form-label">Filière</label>
                     <select class="form-select" id="rapportFiliere">
                         <option value="">Toutes les filières</option>
-                        <?php foreach ($filieres as $f): ?>
+                        <?php foreach ($filieres as $f) : ?>
                             <option value="<?= $f['id'] ?>"><?= htmlspecialchars($f['nom']) ?></option>
                         <?php endforeach; ?>
                     </select>
@@ -49,7 +49,7 @@ $evolutionNotes = db()->fetchAll("
                     <label class="form-label">Niveau</label>
                     <select class="form-select" id="rapportNiveau">
                         <option value="">Tous</option>
-                        <?php foreach ($niveaux as $n): ?>
+                        <?php foreach ($niveaux as $n) : ?>
                             <option value="<?= $n['id'] ?>"><?= htmlspecialchars($n['nom']) ?></option>
                         <?php endforeach; ?>
                     </select>
@@ -150,15 +150,15 @@ $evolutionNotes = db()->fetchAll("
                             </tr>
                         </thead>
                         <tbody id="recapTable">
-                            <?php foreach ($filieres as $f): ?>
-                                <?php foreach ($niveaux as $n): 
+                            <?php foreach ($filieres as $f) : ?>
+                                <?php foreach ($niveaux as $n) :
                                     $count = db()->fetch("SELECT COUNT(*) as c FROM etudiants WHERE filiere_id = ? AND niveau_id = ? AND annee_academique_id = ?", [$f['id'], $n['id'], $anneeCourante['id'] ?? 0])['c'];
-                                    if ($count > 0):
+                                    if ($count > 0) :
                                         $avgNote = db()->fetch("SELECT AVG(moyenne_annuelle) as avg FROM resultats_annuels ra JOIN etudiants e ON ra.etudiant_id = e.id WHERE e.filiere_id = ? AND e.niveau_id = ? AND ra.annee_academique_id = ?", [$f['id'], $n['id'], $anneeCourante['id'] ?? 0]);
                                         $bestNote = db()->fetch("SELECT MAX(moyenne_annuelle) as max FROM resultats_annuels ra JOIN etudiants e ON ra.etudiant_id = e.id WHERE e.filiere_id = ? AND e.niveau_id = ? AND ra.annee_academique_id = ?", [$f['id'], $n['id'], $anneeCourante['id'] ?? 0]);
                                         $admis = db()->fetch("SELECT COUNT(*) as c FROM resultats_annuels ra JOIN etudiants e ON ra.etudiant_id = e.id WHERE e.filiere_id = ? AND e.niveau_id = ? AND ra.annee_academique_id = ? AND ra.decision = 'admis'", [$f['id'], $n['id'], $anneeCourante['id'] ?? 0])['c'];
                                         $taux = $count > 0 ? round(($admis / $count) * 100, 1) : 0;
-                                ?>
+                                        ?>
                                 <tr>
                                     <td><?= htmlspecialchars($f['nom']) ?></td>
                                     <td><span class="badge bg-secondary"><?= htmlspecialchars($n['code']) ?></span></td>
@@ -173,7 +173,8 @@ $evolutionNotes = db()->fetchAll("
                                     </td>
                                     <td><?= $bestNote['max'] ? number_format($bestNote['max'], 2) : '-' ?></td>
                                 </tr>
-                                <?php endif; endforeach; ?>
+                                    <?php endif;
+                                endforeach; ?>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
@@ -199,7 +200,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const moisLabels = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
     const notesData = new Array(12).fill(0);
-    <?php foreach ($evolutionNotes as $n): ?>
+    <?php foreach ($evolutionNotes as $n) : ?>
     notesData[<?= $n['mois'] - 1 ?>] = <?= $n['moyenne'] ?? 0 ?>;
     <?php endforeach; ?>
 

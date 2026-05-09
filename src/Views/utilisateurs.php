@@ -6,7 +6,7 @@ if ($_SESSION['user_role'] !== 'root' && $_SESSION['user_role'] !== 'administrat
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
-    
+
     if ($action === 'create') {
         $data = [
             'username' => trim($_POST['username']),
@@ -18,13 +18,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'telephone' => trim($_POST['telephone'] ?? ''),
             'actif' => 1
         ];
-        
+
         db()->insert('users', $data);
         $_SESSION['success'] = 'Utilisateur créé';
         header('Location: ?page=utilisateurs');
         exit;
     }
-    
+
     if ($action === 'update') {
         $id = intval($_POST['id']);
         $data = [
@@ -35,17 +35,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'role' => $_POST['role'],
             'actif' => isset($_POST['actif']) ? 1 : 0
         ];
-        
+
         if (!empty($_POST['password'])) {
             $data['password_hash'] = password_hash($_POST['password'], PASSWORD_DEFAULT);
         }
-        
+
         db()->update('users', $data, 'id = :id', ['id' => $id]);
         $_SESSION['success'] = 'Utilisateur modifié';
         header('Location: ?page=utilisateurs');
         exit;
     }
-    
+
     if ($action === 'delete') {
         db()->delete('users', 'id = :id', ['id' => intval($_POST['id'])]);
         $_SESSION['success'] = 'Utilisateur supprimé';
@@ -96,7 +96,7 @@ $journal = db()->fetchAll("SELECT j.*, u.username FROM journal_activite j LEFT J
                         <div class="col-md-2">
                             <label class="form-label">Rôle *</label>
                             <select class="form-select" name="role" required>
-                                <?php if ($_SESSION['user_role'] === 'root'): ?>
+                                <?php if ($_SESSION['user_role'] === 'root') : ?>
                                 <option value="root">Root</option>
                                 <?php endif; ?>
                                 <option value="administrateur">Administrateur</option>
@@ -142,7 +142,7 @@ $journal = db()->fetchAll("SELECT j.*, u.username FROM journal_activite j LEFT J
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($utilisateurs as $u): ?>
+                            <?php foreach ($utilisateurs as $u) : ?>
                             <tr>
                                 <td>
                                     <strong><?= htmlspecialchars($u['nom'] . ' ' . $u['prenom']) ?></strong>
@@ -165,7 +165,7 @@ $journal = db()->fetchAll("SELECT j.*, u.username FROM journal_activite j LEFT J
                                         <button class="btn btn-outline-primary" onclick="editUser(<?= $u['id'] ?>)">
                                             <i class="bi bi-pencil"></i>
                                         </button>
-                                        <?php if ($u['id'] != $_SESSION['user_id']): ?>
+                                        <?php if ($u['id'] != $_SESSION['user_id']) : ?>
                                         <button class="btn btn-outline-danger" onclick="deleteUser(<?= $u['id'] ?>)">
                                             <i class="bi bi-trash"></i>
                                         </button>
@@ -195,7 +195,7 @@ $journal = db()->fetchAll("SELECT j.*, u.username FROM journal_activite j LEFT J
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($journal as $j): ?>
+                            <?php foreach ($journal as $j) : ?>
                             <tr>
                                 <td><?= date('d/m/Y H:i', strtotime($j['created_at'])) ?></td>
                                 <td><?= htmlspecialchars($j['username'] ?? 'System') ?></td>
