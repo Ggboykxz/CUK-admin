@@ -1,0 +1,52 @@
+{
+    "app_name": "CUK-Admin",
+    "app_version": "1.0.0",
+    "app_description": "Centre Universitaire de Koulamoutou - Système de Gestion Universitaire",
+    "app_guid": "{8E5F2C9A-3B7D-4E6F-8A1C-9D2B4E5F6A7B}",
+    "window": {
+        "title": "CUK-Admin - Centre Universitaire de Koulamoutou",
+        "width": 1400,
+        "height": 900,
+        "min_width": 1024,
+        "min_height": 768,
+        "center": true,
+        "auto_quit": true,
+        "show_devtools": true
+    },
+    "server": {
+        "port": 8022,
+        "enable_webserver": true,
+        "enable_php_server": true,
+        "document_root": "",
+        "index_files": "index.php,main.php",
+        "phpini": ""
+    },
+    "chrome": {
+        "user_agent": "CUK-Admin/1.0",
+        "cache_path": "chrome_cache",
+        "log_file": "chrome_debug.log",
+        "log_severity": "warning",
+        "remote_debugging_port": 9222,
+        "disable_gpu": false,
+        "force_device_scale_factor": 0,
+        "disable_web_security": false
+    },
+    "resources": {
+        "url_allow_list": [
+            "https://cdn.jsdelivr.net/*",
+            "https://cdn.datatables.net/*",
+            "https://code.jquery.com/*"
+        ]
+    },
+    "php": {
+        "error_log": "php_errors.log",
+        "max_execution_time": 300,
+        "memory_limit": "256M",
+        "upload_max_filesize": "50M",
+        "post_max_size": "50M"
+    },
+    "database": {
+        "auto_install": true,
+        "install_script": "installer/install.php"
+    }
+}
