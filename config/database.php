@@ -1,6 +1,12 @@
 <?php
 
 return [
+    'driver' => 'sqlite',
+    'database' => 'database/cuk_admin.sqlite',
+    'foreign_keys' => true,
+];
+
+return [
     'driver' => 'mysql',
     'host' => 'localhost',
     'database' => 'cuk_admin',
@@ -16,5 +22,5 @@ return [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES => false,
-    ]
+    ],
 ];
