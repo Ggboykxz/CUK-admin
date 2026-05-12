@@ -1,15 +1,29 @@
 <?php
+
+declare(strict_types=1);
+
+require_once __DIR__ . '/../../src/Security.php';
+
+Security::initSession();
+Security::requireAuth();
+
 $instituts = db()->fetchAll("SELECT * FROM instituts WHERE actif = 1 ORDER BY sigle");
 $filieres = db()->fetchAll("SELECT f.*, i.sigle as institut, i.nom as institut_nom FROM filieres f JOIN instituts i ON f.institut_id = i.id WHERE f.active = 1 ORDER BY i.sigle, f.nom");
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
+    if (!Security::validateCsrfToken($_POST['_csrf_token'] ?? '')) {
+        $_SESSION['error'] = 'Session expirée';
+        header('Location: ?page=filieres');
+        exit;
+    }
+
     if ($action === 'create_institut') {
         $data = [
-            'code' => strtoupper(trim($_POST['code'])),
-            'nom' => trim($_POST['nom']),
-            'sigle' => strtoupper(trim($_POST['sigle'])),
+            'code' => strtoupper(trim($_POST['code'] ?? '')),
+            'nom' => trim($_POST['nom'] ?? ''),
+            'sigle' => strtoupper(trim($_POST['sigle'] ?? '')),
             'description' => trim($_POST['description'] ?? ''),
             'actif' => 1
         ];
@@ -21,13 +35,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'create_filiere') {
         $data = [
-            'code' => strtoupper(trim($_POST['code'])),
-            'nom' => trim($_POST['nom']),
+            'code' => strtoupper(trim($_POST['code'] ?? '')),
+            'nom' => trim($_POST['nom'] ?? ''),
             'nom_complet' => trim($_POST['nom_complet'] ?? ''),
             'description' => trim($_POST['description'] ?? ''),
-            'institut_id' => intval($_POST['institut_id']),
-            'duree_ans' => intval($_POST['duree'] ?? 2),
-            'credits_total' => intval($_POST['credits'] ?? 120)
+            'institut_id' => Security::validateInt($_POST['institut_id']),
+            'duree_ans' => Security::validateInt($_POST['duree'] ?? 2, 2),
+            'credits_total' => Security::validateInt($_POST['credits'] ?? 120, 120)
         ];
         db()->insert('filieres', $data);
 
@@ -49,17 +63,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'create_ue') {
-        $filiereCode = db()->fetch("SELECT code FROM filieres WHERE id = ?", [intval($_POST['filiere_id'])])['code'];
-        $semestre = intval($_POST['semestre']);
+        $filiereCode = db()->fetch("SELECT code FROM filieres WHERE id = ?", [Security::validateInt($_POST['filiere_id'])])['code'] ?? '';
+        $semestre = Security::validateInt($_POST['semestre']);
         $semestreData = db()->fetch("SELECT id FROM semestres WHERE code LIKE ? AND numero = ?", [$filiereCode . '%', $semestre]);
 
         $data = [
-            'code' => strtoupper(trim($_POST['code'])),
-            'nom' => trim($_POST['nom']),
+            'code' => strtoupper(trim($_POST['code'] ?? '')),
+            'nom' => trim($_POST['nom'] ?? ''),
             'description' => trim($_POST['description'] ?? ''),
-            'filiere_id' => intval($_POST['filiere_id']),
-            'semestre_id' => $semestreData['id'],
-            'credits' => floatval($_POST['credits']),
+            'filiere_id' => Security::validateInt($_POST['filiere_id']),
+            'semestre_id' => $semestreData['id'] ?? 0,
+            'credits' => floatval($_POST['credits'] ?? 0),
             'obligatoire' => isset($_POST['obligatoire']) ? 1 : 0
         ];
         db()->insert('ues', $data);
@@ -70,14 +84,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'create_ec') {
         $data = [
-            'code' => strtoupper(trim($_POST['code'])),
-            'nom' => trim($_POST['nom']),
-            'ue_id' => intval($_POST['ue_id']),
-            'coefficient' => floatval($_POST['coefficient']),
+            'code' => strtoupper(trim($_POST['code'] ?? '')),
+            'nom' => trim($_POST['nom'] ?? ''),
+            'ue_id' => Security::validateInt($_POST['ue_id']),
+            'coefficient' => floatval($_POST['coefficient'] ?? 1),
             'coefficient_cc' => floatval($_POST['coef_cc'] ?? 0.20),
             'coefficient_tp' => floatval($_POST['coef_tp'] ?? 0.20),
             'coefficient_examen' => floatval($_POST['coef_examen'] ?? 0.60),
-            'type' => $_POST['type'] ?? 'mixed'
+            'type' => Security::validateEnum($_POST['type'] ?? 'mixed', ['mixed', 'theorique', 'pratique', 'tp'], 'mixed')
         ];
         db()->insert('ecs', $data);
         $_SESSION['success'] = 'EC créé avec succès';
@@ -86,26 +100,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-if (isset($_SESSION['success'])) {
-    echo '<div class="alert alert-success alert-dismissible fade show" role="alert">
-        <i class="bi bi-check-circle"></i> ' . $_SESSION['success'] . '
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>';
-    unset($_SESSION['success']);
-}
+Security::showSuccess();
+Security::showError();
 
-$ues = db()->fetchAll("SELECT ue.*, f.nom as filiere, f.code as filiere_code, s.nom as semestre 
-    FROM ues ue 
-    JOIN filieres f ON ue.filiere_id = f.id 
-    JOIN semestres s ON ue.semestre_id = s.id
-    WHERE ue.active = 1 
-    ORDER BY f.code, s.numero");
+$ues = db()->fetchAll("SELECT ue.*, f.nom as filiere, f.code as filiere_code, s.nom as semestre FROM ues ue JOIN filieres f ON ue.filiere_id = f.id JOIN semestres s ON ue.semestre_id = s.id WHERE ue.active = 1 ORDER BY f.code, s.numero");
 
-$ecs = db()->fetchAll("SELECT ec.*, ue.nom as ue_nom, ue.code as ue_code 
-    FROM ecs ec 
-    JOIN ues ue ON ec.ue_id = ue.id 
-    WHERE ec.active = 1 
-    ORDER BY ue.code");
+$ecs = db()->fetchAll("SELECT ec.*, ue.nom as ue_nom, ue.code as ue_code FROM ecs ec JOIN ues ue ON ec.ue_id = ue.id WHERE ec.active = 1 ORDER BY ue.code");
 ?>
 
 <div class="filieres-page">
@@ -132,6 +132,7 @@ $ecs = db()->fetchAll("SELECT ec.*, ue.nom as ue_nom, ue.code as ue_code
                 </div>
                 <div class="card-body">
                     <form method="POST" class="row g-3">
+                        <?= Security::csrfField() ?>
                         <input type="hidden" name="action" value="create_institut">
                         <div class="col-md-2">
                             <label class="form-label">Code</label>
@@ -161,19 +162,17 @@ $ecs = db()->fetchAll("SELECT ec.*, ue.nom as ue_nom, ue.code as ue_code
                 <div class="col-md-6 mb-4">
                     <div class="card h-100">
                         <div class="card-header bg-<?= $inst['sigle'] === 'ISTPK' ? 'primary' : 'info' ?> text-white">
-                            <h4 class="mb-0"><i class="bi bi-building"></i> <?= htmlspecialchars($inst['sigle']) ?></h4>
+                            <h4 class="mb-0"><i class="bi bi-building"></i> <?= Security::h($inst['sigle']) ?></h4>
                         </div>
                         <div class="card-body">
-                            <h5><?= htmlspecialchars($inst['nom']) ?></h5>
-                            <p class="text-muted"><?= htmlspecialchars($inst['description'] ?? '') ?></p>
+                            <h5><?= Security::h($inst['nom']) ?></h5>
+                            <p class="text-muted"><?= Security::h($inst['description'] ?? '') ?></p>
                             <hr>
                             <h6>Filières DUT:</h6>
                             <ul>
-                                <?php
-                                $filieresInst = array_filter($filieres, fn($f) => $f['institut_id'] == $inst['id']);
-                                foreach ($filieresInst as $f) :
-                                    ?>
-                                <li><?= htmlspecialchars($f['nom']) ?></li>
+                                <?php $filieresInst = array_filter($filieres, fn($f) => $f['institut_id'] == $inst['id']); ?>
+                                <?php foreach ($filieresInst as $f) : ?>
+                                <li><?= Security::h($f['nom']) ?></li>
                                 <?php endforeach; ?>
                             </ul>
                         </div>
@@ -190,6 +189,7 @@ $ecs = db()->fetchAll("SELECT ec.*, ue.nom as ue_nom, ue.code as ue_code
                 </div>
                 <div class="card-body">
                     <form method="POST" class="row g-3">
+                        <?= Security::csrfField() ?>
                         <input type="hidden" name="action" value="create_filiere">
                         <div class="col-md-2">
                             <label class="form-label">Code *</label>
@@ -208,7 +208,7 @@ $ecs = db()->fetchAll("SELECT ec.*, ue.nom as ue_nom, ue.code as ue_code
                             <select class="form-select" name="institut_id" required>
                                 <option value="">Sélectionner...</option>
                                 <?php foreach ($instituts as $inst) : ?>
-                                    <option value="<?= $inst['id'] ?>"><?= htmlspecialchars($inst['sigle']) ?></option>
+                                    <option value="<?= $inst['id'] ?>"><?= Security::h($inst['sigle']) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -241,9 +241,9 @@ $ecs = db()->fetchAll("SELECT ec.*, ue.nom as ue_nom, ue.code as ue_code
                         <tbody>
                             <?php foreach ($filieres as $f) : ?>
                             <tr>
-                                <td><span class="badge bg-<?= $f['institut'] === 'ISTPK' ? 'primary' : 'info' ?>"><?= htmlspecialchars($f['institut']) ?></span></td>
-                                <td><strong><?= htmlspecialchars($f['code']) ?></strong></td>
-                                <td><?= htmlspecialchars($f['nom']) ?></td>
+                                <td><span class="badge bg-<?= $f['institut'] === 'ISTPK' ? 'primary' : 'info' ?>"><?= Security::h($f['institut']) ?></span></td>
+                                <td><strong><?= Security::h($f['code']) ?></strong></td>
+                                <td><?= Security::h($f['nom']) ?></td>
                                 <td><?= $f['duree_ans'] ?> ans</td>
                                 <td><?= $f['credits_total'] ?></td>
                             </tr>
@@ -259,6 +259,7 @@ $ecs = db()->fetchAll("SELECT ec.*, ue.nom as ue_nom, ue.code as ue_code
                 <div class="card-header"><h5><i class="bi bi-plus-circle"></i> Nouvelle UE</h5></div>
                 <div class="card-body">
                     <form method="POST" class="row g-3">
+                        <?= Security::csrfField() ?>
                         <input type="hidden" name="action" value="create_ue">
                         <div class="col-md-2">
                             <label class="form-label">Code *</label>
@@ -273,7 +274,7 @@ $ecs = db()->fetchAll("SELECT ec.*, ue.nom as ue_nom, ue.code as ue_code
                             <select class="form-select" name="filiere_id" id="ueFiliere" required>
                                 <option value="">Sélectionner...</option>
                                 <?php foreach ($filieres as $f) : ?>
-                                    <option value="<?= $f['id'] ?>"><?= htmlspecialchars($f['code'] . ' - ' . $f['nom']) ?></option>
+                                    <option value="<?= $f['id'] ?>"><?= Security::h($f['code'] . ' - ' . $f['nom']) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -317,9 +318,9 @@ $ecs = db()->fetchAll("SELECT ec.*, ue.nom as ue_nom, ue.code as ue_code
                         <tbody>
                             <?php foreach ($ues as $ue) : ?>
                             <tr>
-                                <td><strong><?= htmlspecialchars($ue['code']) ?></strong></td>
-                                <td><?= htmlspecialchars($ue['nom']) ?></td>
-                                <td><?= htmlspecialchars($ue['filiere_code']) ?></td>
+                                <td><strong><?= Security::h($ue['code']) ?></strong></td>
+                                <td><?= Security::h($ue['nom']) ?></td>
+                                <td><?= Security::h($ue['filiere_code']) ?></td>
                                 <td><span class="badge bg-secondary">S<?= substr($ue['semestre'], -1) ?></span></td>
                                 <td><?= $ue['credits'] ?></td>
                             </tr>
@@ -335,6 +336,7 @@ $ecs = db()->fetchAll("SELECT ec.*, ue.nom as ue_nom, ue.code as ue_code
                 <div class="card-header"><h5><i class="bi bi-plus-circle"></i> Nouvel EC (Matière)</h5></div>
                 <div class="card-body">
                     <form method="POST" class="row g-3">
+                        <?= Security::csrfField() ?>
                         <input type="hidden" name="action" value="create_ec">
                         <div class="col-md-2">
                             <label class="form-label">Code *</label>
@@ -349,7 +351,7 @@ $ecs = db()->fetchAll("SELECT ec.*, ue.nom as ue_nom, ue.code as ue_code
                             <select class="form-select" name="ue_id" required>
                                 <option value="">Sélectionner...</option>
                                 <?php foreach ($ues as $ue) : ?>
-                                    <option value="<?= $ue['id'] ?>"><?= htmlspecialchars($ue['code'] . ' - ' . $ue['nom']) ?></option>
+                                    <option value="<?= $ue['id'] ?>"><?= Security::h($ue['code'] . ' - ' . $ue['nom']) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -395,11 +397,11 @@ $ecs = db()->fetchAll("SELECT ec.*, ue.nom as ue_nom, ue.code as ue_code
                         <tbody>
                             <?php foreach ($ecs as $ec) : ?>
                             <tr>
-                                <td><strong><?= htmlspecialchars($ec['code']) ?></strong></td>
-                                <td><?= htmlspecialchars($ec['nom']) ?></td>
-                                <td><?= htmlspecialchars($ec['ue_code']) ?></td>
+                                <td><strong><?= Security::h($ec['code']) ?></strong></td>
+                                <td><?= Security::h($ec['nom']) ?></td>
+                                <td><?= Security::h($ec['ue_code']) ?></td>
                                 <td><?= $ec['coefficient'] ?></td>
-                                <td><span class="badge bg-secondary"><?= $ec['type'] ?></span></td>
+                                <td><span class="badge bg-secondary"><?= Security::h($ec['type']) ?></span></td>
                             </tr>
                             <?php endforeach; ?>
                         </tbody>

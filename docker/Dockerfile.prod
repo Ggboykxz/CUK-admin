@@ -1,0 +1,48 @@
+FROM php:8.2-fpm-alpine
+
+RUN apk add --no-cache \
+    nginx \
+    supervisor \
+    curl \
+    zip \
+    unzip \
+    icu-dev \
+    oniguruma-dev \
+    libzip-dev \
+    libpng-dev \
+    freetype-dev \
+    libjpeg-turbo-dev \
+    redis \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) \
+        pdo_mysql \
+        pdo_sqlite \
+        zip \
+        gd \
+        mbstring \
+        intl \
+        opcache \
+    && pecl install redis \
+    && docker-php-ext-enable redis opcache
+
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+COPY docker/php.ini /usr/local/etc/php/php.ini
+COPY docker/nginx.conf /etc/nginx/http.d/default.conf
+COPY docker/supervisord.conf /etc/supervisord.conf
+
+RUN mkdir -p /var/log/php /var/log/nginx /var/www/html/runtime/logs /var/www/html/runtime/backups
+
+WORKDIR /var/www/html
+
+COPY composer.json .
+RUN composer install --no-dev --optimize-autoloader --no-interaction
+
+COPY . .
+
+RUN chown -R nobody:nobody /var/www/html/runtime /var/www/html/database \
+    && chmod -R 755 /var/www/html/runtime /var/www/html/database
+
+EXPOSE 80 443
+
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]

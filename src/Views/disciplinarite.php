@@ -1,17 +1,31 @@
 <?php
+
+declare(strict_types=1);
+
+require_once __DIR__ . '/../../src/Security.php';
+
+Security::initSession();
+Security::requireAuth();
+
 $anneeCourante = db()->fetch("SELECT id, annee FROM annees_academiques WHERE courante = 1");
 $etudiants = db()->fetchAll("SELECT id, numero, nom, prenom FROM etudiants WHERE annee_academique_id = ? ORDER BY nom", [$anneeCourante['id'] ?? 0]);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
+    if (!Security::validateCsrfToken($_POST['_csrf_token'] ?? '')) {
+        $_SESSION['error'] = 'Session expirée';
+        header('Location: ?page=disciplinarite');
+        exit;
+    }
+
     if ($action === 'ajouter') {
         $data = [
-            'etudiant_id' => intval($_POST['etudiant_id']),
-            'type' => $_POST['type'],
-            'description' => trim($_POST['description']),
-            'gravite' => $_POST['gravite'],
-            'date_incident' => $_POST['date_incident'],
+            'etudiant_id' => Security::validateInt($_POST['etudiant_id']),
+            'type' => Security::validateEnum($_POST['type'] ?? '', ['retard', 'absence', 'fraude', 'triche', 'violence', 'vandalisme', 'non_paiement', 'autre'], 'autre'),
+            'description' => trim($_POST['description'] ?? ''),
+            'gravite' => Security::validateEnum($_POST['gravite'] ?? '', ['mineur', 'majeur', 'grave'], 'mineur'),
+            'date_incident' => Security::validateDate($_POST['date_incident'] ?? ''),
             'lieu' => trim($_POST['lieu'] ?? ''),
             'temoin' => trim($_POST['temoin'] ?? ''),
             'utilisateur_id' => $_SESSION['user_id'],
@@ -21,14 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ];
 
         db()->insert('incidents', $data);
-
-        $etudiant = db()->fetch("SELECT nom, prenom FROM etudiants WHERE id = ?", [$data['etudiant_id']]);
-        db()->insert('journal_activite', [
-            'user_id' => $_SESSION['user_id'],
-            'action' => 'ajouter_incident',
-            'details' => "Incident pour {$etudiant['prenom']} {$etudiant['nom']} - {$data['type']}",
-            'ip_address' => $_SERVER['REMOTE_ADDR'] ?? ''
-        ]);
+        Security::logActivity('ajouter_incident', "Incident ajouté", 'incidents');
 
         $_SESSION['success'] = 'Incident enregistré';
         header('Location: ?page=disciplinarite');
@@ -37,11 +44,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'traiter') {
         db()->update('incidents', [
-            'mesures' => trim($_POST['mesures']),
+            'mesures' => trim($_POST['mesures'] ?? ''),
             'sanction' => trim($_POST['sanction'] ?? ''),
             'date_mesures' => date('Y-m-d'),
             'statut' => 'traite'
-        ], 'id = :id', ['id' => intval($_POST['id'])]);
+        ], 'id = :id', ['id' => Security::validateInt($_POST['id'])]);
 
         $_SESSION['success'] = 'Incident traité';
         header('Location: ?page=disciplinarite');
@@ -49,28 +56,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'cloturer') {
-        db()->update('incidents', ['statut' => 'cloture'], 'id = :id', ['id' => intval($_POST['id'])]);
+        db()->update('incidents', ['statut' => 'cloture'], 'id = :id', ['id' => Security::validateInt($_POST['id'])]);
         $_SESSION['success'] = 'Incident clôturé';
         header('Location: ?page=disciplinarite');
         exit;
     }
 }
 
-if (isset($_SESSION['success'])) {
-    echo '<div class="alert alert-success alert-dismissible fade show" role="alert">
-        <i class="bi bi-check-circle"></i> ' . $_SESSION['success'] . '
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>';
-    unset($_SESSION['success']);
-}
+Security::showSuccess();
+Security::showError();
 
-$incidents = db()->fetchAll("
-    SELECT i.*, e.numero, e.nom, e.prenom, u.nom as signaleur
-    FROM incidents i
-    JOIN etudiants e ON i.etudiant_id = e.id
-    JOIN users u ON i.utilisateur_id = u.id
-    ORDER BY i.date_incident DESC
-");
+$incidents = db()->fetchAll("SELECT i.*, e.numero, e.nom, e.prenom, u.nom as signaleur FROM incidents i JOIN etudiants e ON i.etudiant_id = e.id JOIN users u ON i.utilisateur_id = u.id ORDER BY i.date_incident DESC");
 
 $statsIncidents = [
     'total' => count($incidents),
@@ -110,13 +106,14 @@ $statsIncidents = [
         </div>
         <div class="card-body">
             <form method="POST" class="row g-3">
+                <?= Security::csrfField() ?>
                 <input type="hidden" name="action" value="ajouter">
                 <div class="col-md-4">
                     <label class="form-label">Étudiant *</label>
                     <select class="form-select" name="etudiant_id" required>
                         <option value="">Sélectionner...</option>
                         <?php foreach ($etudiants as $e) : ?>
-                            <option value="<?= $e['id'] ?>"><?= htmlspecialchars($e['nom'] . ' ' . $e['prenom'] . ' (' . $e['numero'] . ')') ?></option>
+                            <option value="<?= $e['id'] ?>"><?= Security::h($e['nom'] . ' ' . $e['prenom'] . ' (' . $e['numero'] . ')') ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -188,8 +185,8 @@ $statsIncidents = [
                     <tr class="<?= $i['gravite'] === 'grave' ? 'table-danger' : ($i['gravite'] === 'majeur' ? 'table-warning' : '') ?>">
                         <td><?= date('d/m/Y', strtotime($i['date_incident'])) ?></td>
                         <td>
-                            <strong><?= htmlspecialchars($i['prenom'] . ' ' . $i['nom']) ?></strong>
-                            <small class="d-block text-muted"><?= htmlspecialchars($i['numero']) ?></small>
+                            <strong><?= Security::h($i['prenom'] . ' ' . $i['nom']) ?></strong>
+                            <small class="d-block text-muted"><?= Security::h($i['numero']) ?></small>
                         </td>
                         <td>
                             <span class="badge bg-<?= $i['type'] === 'fraude' || $i['type'] === 'triche' ? 'danger' : 'secondary' ?>">
@@ -202,7 +199,7 @@ $statsIncidents = [
                             </span>
                         </td>
                         <td>
-                            <small><?= htmlspecialchars(substr($i['description'], 0, 80)) ?><?= strlen($i['description']) > 80 ? '...' : '' ?></small>
+                            <small><?= Security::h(substr($i['description'], 0, 80)) ?><?= strlen($i['description']) > 80 ? '...' : '' ?></small>
                         </td>
                         <td>
                             <span class="badge bg-<?= $i['statut'] === 'cloture' ? 'success' : ($i['statut'] === 'traite' ? 'info' : 'warning text-dark') ?>">
@@ -254,6 +251,7 @@ $statsIncidents = [
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST">
+                <?= Security::csrfField() ?>
                 <div class="modal-body">
                     <input type="hidden" name="action" value="traiter">
                     <input type="hidden" name="id" id="traiterId">
@@ -276,39 +274,62 @@ $statsIncidents = [
 </div>
 
 <form id="cloturerForm" method="POST" style="display:none;">
+    <?= Security::csrfField() ?>
     <input type="hidden" name="action" value="cloturer">
     <input type="hidden" name="id" id="cloturerId">
 </form>
 
 <script>
+<?php
+$incidentData = array_map(function($i) {
+    return [
+        'id' => $i['id'],
+        'prenom' => $i['prenom'],
+        'nom' => $i['nom'],
+        'numero' => $i['numero'],
+        'type' => $i['type'],
+        'gravite' => $i['gravite'],
+        'statut' => $i['statut'],
+        'description' => $i['description'],
+        'lieu' => $i['lieu'],
+        'date_incident' => $i['date_incident'],
+        'signaleur' => $i['signaleur'],
+        'temoin' => $i['temoin'],
+        'mesures' => $i['mesures'],
+        'sanction' => $i['sanction']
+    ];
+}, $incidents);
+?>
+const incidents = <?= Security::safeJson($incidentData) ?>;
+
 function viewIncident(id) {
-    const incidents = <?= json_encode($incidents) ?>;
     const incident = incidents.find(i => i.id == id);
+    const esc = (s) => { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; };
     
     document.getElementById('viewContent').innerHTML = `
         <div class="row">
             <div class="col-md-6">
                 <table class="table table-sm">
-                    <tr><th>Étudiant:</th><td>${incident.prenom} ${incident.nom}</td></tr>
-                    <tr><th>Numéro:</th><td>${incident.numero}</td></tr>
-                    <tr><th>Date:</th><td>${incident.date_incident}</td></tr>
-                    <tr><th>Type:</th><td>${incident.type}</td></tr>
-                    <tr><th>Gravité:</th><td>${incident.gravite}</td></tr>
-                    <tr><th>Lieu:</th><td>${incident.lieu || '-'}</td></tr>
+                    <tr><th>Étudiant:</th><td>${esc(incident.prenom)} ${esc(incident.nom)}</td></tr>
+                    <tr><th>Numéro:</th><td>${esc(incident.numero)}</td></tr>
+                    <tr><th>Date:</th><td>${esc(incident.date_incident)}</td></tr>
+                    <tr><th>Type:</th><td>${esc(incident.type)}</td></tr>
+                    <tr><th>Gravité:</th><td>${esc(incident.gravite)}</td></tr>
+                    <tr><th>Lieu:</th><td>${esc(incident.lieu || '-')}</td></tr>
                 </table>
             </div>
             <div class="col-md-6">
                 <table class="table table-sm">
-                    <tr><th>Statut:</th><td>${incident.statut}</td></tr>
-                    <tr><th>Signalé par:</th><td>${incident.signaleur}</td></tr>
-                    <tr><th>Témoins:</th><td>${incident.temoin || '-'}</td></tr>
-                    <tr><th>Mesures:</th><td>${incident.mesures || '-'}</td></tr>
-                    <tr><th>Sanction:</th><td>${incident.sanction || '-'}</td></tr>
+                    <tr><th>Statut:</th><td>${esc(incident.statut)}</td></tr>
+                    <tr><th>Signalé par:</th><td>${esc(incident.signaleur)}</td></tr>
+                    <tr><th>Témoins:</th><td>${esc(incident.temoin || '-')}</td></tr>
+                    <tr><th>Mesures:</th><td>${esc(incident.mesures || '-')}</td></tr>
+                    <tr><th>Sanction:</th><td>${esc(incident.sanction || '-')}</td></tr>
                 </table>
             </div>
             <div class="col-12">
                 <h6>Description:</h6>
-                <p>${incident.description}</p>
+                <p>${esc(incident.description)}</p>
             </div>
         </div>
     `;

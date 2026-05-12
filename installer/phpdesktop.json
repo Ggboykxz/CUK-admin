@@ -11,7 +11,7 @@
         "min_height": 768,
         "center": true,
         "auto_quit": true,
-        "show_devtools": true
+        "show_devtools": false
     },
     "server": {
         "port": 8022,
@@ -26,7 +26,7 @@
         "cache_path": "chrome_cache",
         "log_file": "chrome_debug.log",
         "log_severity": "warning",
-        "remote_debugging_port": 9222,
+        "remote_debugging_port": 0,
         "disable_gpu": false,
         "force_device_scale_factor": 0,
         "disable_web_security": false

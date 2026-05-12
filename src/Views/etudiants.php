@@ -1,57 +1,68 @@
 <?php
+
+declare(strict_types=1);
+
+require_once __DIR__ . '/../../src/Security.php';
+
+Security::initSession();
+Security::requireAuth();
+
 $anneeCourante = db()->fetch("SELECT id, annee FROM annees_academiques WHERE courante = 1");
 $instituts = db()->fetchAll("SELECT * FROM instituts WHERE actif = 1 ORDER BY sigle");
 $filieres = db()->fetchAll("SELECT f.*, i.nom as institut_nom, i.sigle as institut_sigle FROM filieres f JOIN instituts i ON f.institut_id = i.id WHERE f.active = 1 ORDER BY i.sigle, f.nom");
 
 if (isset($_GET['action']) && $_GET['action'] === 'get') {
-    $id = intval($_GET['id']);
-    $etudiant = db()->fetch("
-        SELECT e.*, f.nom as filiere, f.code as filiere_code, i.sigle as institut, i.nom as institut_nom 
-        FROM etudiants e 
-        JOIN filieres f ON e.filiere_id = f.id 
-        JOIN instituts i ON f.institut_id = i.id 
-        WHERE e.id = ?", [$id]);
-    echo json_encode($etudiant);
+    Security::requireAuth();
+    header('Content-Type: application/json');
+    $id = Security::validateInt($_GET['id']);
+    $etudiant = db()->fetch("SELECT e.*, f.nom as filiere, f.code as filiere_code, i.sigle as institut, i.nom as institut_nom FROM etudiants e JOIN filieres f ON e.filiere_id = f.id JOIN instituts i ON f.institut_id = i.id WHERE e.id = ?", [$id]);
+    echo Security::safeJson($etudiant);
     exit;
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
+    if (!Security::validateCsrfToken($_POST['_csrf_token'] ?? '')) {
+        $_SESSION['error'] = 'Session expirée';
+        header('Location: ?page=etudiants');
+        exit;
+    }
+
+    if (($_SESSION['user_role'] ?? '') === 'professeur') {
+        $_SESSION['error'] = 'Permission insuffisante';
+        header('Location: ?page=etudiants');
+        exit;
+    }
+
     if ($action === 'create') {
-        $numero = 'ETU-' . date('Y') . '-' . str_pad(db()->fetch("SELECT COUNT(*)+1 as count FROM etudiants")['count'], 3, '0', STR_PAD_LEFT);
-        $matricule = 'MAT-' . date('Y') . '-' . substr(md5(uniqid()), 0, 6);
+        $numero = 'ETU-' . date('Y') . '-' . str_pad((db()->fetch("SELECT COUNT(*)+1 as count FROM etudiants")['count'] ?? 1), 3, '0', STR_PAD_LEFT);
+        $matricule = 'MAT-' . date('Y') . '-' . substr(md5(uniqid('', true)), 0, 6);
+
+        $semestre = Security::validateEnum($_POST['semestre'] ?? '', ['S1', 'S2', 'S3', 'S4'], 'S1');
 
         $data = [
             'numero' => $numero,
             'matricule' => $matricule,
-            'nom' => trim($_POST['nom']),
-            'prenom' => trim($_POST['prenom']),
-            'sexe' => $_POST['sexe'],
-            'date_naissance' => $_POST['date_naissance'],
+            'nom' => trim($_POST['nom'] ?? ''),
+            'prenom' => trim($_POST['prenom'] ?? ''),
+            'sexe' => Security::validateEnum($_POST['sexe'] ?? '', ['M', 'F'], 'M'),
+            'date_naissance' => Security::validateDate($_POST['date_naissance'] ?? ''),
             'lieu_naissance' => trim($_POST['lieu_naissance'] ?? ''),
             'nationalite' => trim($_POST['nationalite'] ?? 'Gabonaise'),
             'telephone' => trim($_POST['telephone'] ?? ''),
-            'email' => trim($_POST['email'] ?? ''),
+            'email' => Security::validateEmail($_POST['email'] ?? ''),
             'adresse' => trim($_POST['adresse'] ?? ''),
-            'filiere_id' => intval($_POST['filiere_id']),
-            'semestre' => $_POST['semestre'] ?? 'S1',
-            'annee_academique_id' => intval($_POST['annee_academique_id']),
+            'filiere_id' => Security::validateInt($_POST['filiere_id']),
+            'semestre' => $semestre,
+            'annee_academique_id' => Security::validateInt($_POST['annee_academique_id']),
             'date_inscription' => date('Y-m-d'),
             'boursier' => isset($_POST['boursier']) ? 1 : 0,
             'statut' => 'actif'
         ];
 
         $id = db()->insert('etudiants', $data);
-
-        db()->insert('journal_activite', [
-            'user_id' => $_SESSION['user_id'],
-            'action' => 'create_etudiant',
-            'table_concernee' => 'etudiants',
-            'id_concerne' => $id,
-            'details' => "Nouvel étudiant: {$data['prenom']} {$data['nom']}",
-            'ip_address' => $_SERVER['REMOTE_ADDR'] ?? ''
-        ]);
+        Security::logActivity('create_etudiant', "Nouvel étudiant: {$data['prenom']} {$data['nom']}", 'etudiants', $id);
 
         $_SESSION['success'] = 'Étudiant enregistré avec succès';
         header('Location: ?page=etudiants');
@@ -59,21 +70,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'update') {
-        $id = intval($_POST['id']);
+        $id = Security::validateInt($_POST['id']);
+        $semestre = Security::validateEnum($_POST['semestre'] ?? '', ['S1', 'S2', 'S3', 'S4'], 'S1');
+        $statut = Security::validateEnum($_POST['statut'] ?? 'actif', ['actif', 'suspendu', 'redoublant', 'diplome', 'abandon', 'exclu'], 'actif');
+
         $data = [
-            'nom' => trim($_POST['nom']),
-            'prenom' => trim($_POST['prenom']),
-            'sexe' => $_POST['sexe'],
-            'date_naissance' => $_POST['date_naissance'],
+            'nom' => trim($_POST['nom'] ?? ''),
+            'prenom' => trim($_POST['prenom'] ?? ''),
+            'sexe' => Security::validateEnum($_POST['sexe'] ?? '', ['M', 'F'], 'M'),
+            'date_naissance' => Security::validateDate($_POST['date_naissance'] ?? ''),
             'lieu_naissance' => trim($_POST['lieu_naissance'] ?? ''),
             'nationalite' => trim($_POST['nationalite'] ?? 'Gabonaise'),
             'telephone' => trim($_POST['telephone'] ?? ''),
-            'email' => trim($_POST['email'] ?? ''),
+            'email' => Security::validateEmail($_POST['email'] ?? ''),
             'adresse' => trim($_POST['adresse'] ?? ''),
-            'filiere_id' => intval($_POST['filiere_id']),
-            'semestre' => $_POST['semestre'] ?? 'S1',
+            'filiere_id' => Security::validateInt($_POST['filiere_id']),
+            'semestre' => $semestre,
             'boursier' => isset($_POST['boursier']) ? 1 : 0,
-            'statut' => $_POST['statut'] ?? 'actif',
+            'statut' => $statut,
             'observation' => trim($_POST['observation'] ?? '')
         ];
 
@@ -84,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'delete') {
-        $id = intval($_POST['id']);
+        $id = Security::validateInt($_POST['id']);
         db()->delete('etudiants', 'id = :id', ['id' => $id]);
         $_SESSION['success'] = 'Étudiant supprimé';
         header('Location: ?page=etudiants');
@@ -92,21 +106,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-if (isset($_SESSION['success'])) {
-    echo '<div class="alert alert-success alert-dismissible fade show" role="alert">
-        <i class="bi bi-check-circle"></i> ' . $_SESSION['success'] . '
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>';
-    unset($_SESSION['success']);
-}
+Security::showSuccess();
+Security::showError();
 
-$etudiants = db()->fetchAll("
-    SELECT e.*, f.nom as filiere, f.code as filiere_code, i.sigle as institut, i.nom as institut_nom
-    FROM etudiants e
-    JOIN filieres f ON e.filiere_id = f.id
-    JOIN instituts i ON f.institut_id = i.id
-    ORDER BY i.sigle, f.nom, e.nom
-");
+$etudiants = db()->fetchAll("SELECT e.*, f.nom as filiere, f.code as filiere_code, i.sigle as institut, i.nom as institut_nom FROM etudiants e JOIN filieres f ON e.filiere_id = f.id JOIN instituts i ON f.institut_id = i.id ORDER BY i.sigle, f.nom, e.nom");
 ?>
 
 <div class="etudiants-page">
@@ -115,13 +118,13 @@ $etudiants = db()->fetchAll("
             <select class="form-select" id="filterInstitut">
                 <option value="">Tous les Instituts</option>
                 <?php foreach ($instituts as $inst) : ?>
-                    <option value="<?= $inst['id'] ?>"><?= htmlspecialchars($inst['sigle'] . ' - ' . $inst['nom']) ?></option>
+                    <option value="<?= $inst['id'] ?>"><?= Security::h($inst['sigle'] . ' - ' . $inst['nom']) ?></option>
                 <?php endforeach; ?>
             </select>
             <select class="form-select" id="filterFiliere">
                 <option value="">Toutes les Filières DUT</option>
                 <?php foreach ($filieres as $f) : ?>
-                    <option value="<?= $f['id'] ?>"><?= htmlspecialchars($f['nom']) ?></option>
+                    <option value="<?= $f['id'] ?>"><?= Security::h($f['nom']) ?></option>
                 <?php endforeach; ?>
             </select>
             <select class="form-select" id="filterSemestre">
@@ -140,7 +143,7 @@ $etudiants = db()->fetchAll("
                 <option value="redoublant">Redoublant</option>
             </select>
         </div>
-        <?php if ($_SESSION['user_role'] !== 'professeur') : ?>
+        <?php if (($_SESSION['user_role'] ?? '') !== 'professeur') : ?>
         <button class="btn btn-primary" onclick="openModal('etudiant', 'create')">
             <i class="bi bi-plus-circle"></i> Nouvel Étudiant
         </button>
@@ -164,25 +167,25 @@ $etudiants = db()->fetchAll("
                 <tbody>
                     <?php foreach ($etudiants as $e) : ?>
                     <tr data-filiere="<?= $e['filiere_id'] ?>" data-semestre="<?= $e['semestre'] ?>" data-statut="<?= $e['statut'] ?>">
-                        <td><strong><?= htmlspecialchars($e['numero']) ?></strong></td>
+                        <td><strong><?= Security::h($e['numero']) ?></strong></td>
                         <td>
                             <div class="d-flex align-items-center gap-2">
                                 <div class="student-avatar">
-                                    <?= strtoupper(substr($e['prenom'], 0, 1) . substr($e['nom'], 0, 1)) ?>
+                                    <?= Security::h(strtoupper(substr($e['prenom'], 0, 1) . substr($e['nom'], 0, 1))) ?>
                                 </div>
                                 <div>
-                                    <strong><?= htmlspecialchars($e['prenom'] . ' ' . $e['nom']) ?></strong>
-                                    <small class="d-block text-muted"><?= htmlspecialchars($e['email'] ?? '') ?></small>
+                                    <strong><?= Security::h($e['prenom'] . ' ' . $e['nom']) ?></strong>
+                                    <small class="d-block text-muted"><?= Security::h($e['email'] ?? '') ?></small>
                                 </div>
                             </div>
                         </td>
                         <td>
                             <span class="badge bg-<?= $e['institut'] === 'ISTPK' ? 'primary' : 'info' ?>">
-                                <?= htmlspecialchars($e['institut']) ?>
+                                <?= Security::h($e['institut']) ?>
                             </span>
                         </td>
-                        <td><?= htmlspecialchars($e['filiere']) ?></td>
-                        <td><span class="badge bg-secondary"><?= htmlspecialchars($e['semestre']) ?></span></td>
+                        <td><?= Security::h($e['filiere']) ?></td>
+                        <td><span class="badge bg-secondary"><?= Security::h($e['semestre']) ?></span></td>
                         <td>
                             <span class="badge bg-<?= $e['statut'] === 'actif' ? 'success' : ($e['statut'] === 'suspendu' ? 'danger' : 'secondary') ?>">
                                 <?= ucfirst($e['statut']) ?>
@@ -193,7 +196,7 @@ $etudiants = db()->fetchAll("
                                 <button class="btn btn-outline-primary" onclick="viewEtudiant(<?= $e['id'] ?>)" title="Voir">
                                     <i class="bi bi-eye"></i>
                                 </button>
-                                <?php if ($_SESSION['user_role'] !== 'professeur') : ?>
+                                <?php if (($_SESSION['user_role'] ?? '') !== 'professeur') : ?>
                                 <button class="btn btn-outline-secondary" onclick="openModal('etudiant', 'edit', <?= $e['id'] ?>)" title="Modifier">
                                     <i class="bi bi-pencil"></i>
                                 </button>
@@ -219,6 +222,7 @@ $etudiants = db()->fetchAll("
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" class="modal-body">
+                <?= Security::csrfField() ?>
                 <input type="hidden" name="action" id="formAction" value="create">
                 <input type="hidden" name="id" id="formId">
                 
@@ -267,7 +271,7 @@ $etudiants = db()->fetchAll("
                         <select class="form-select" id="institutSelect" required>
                             <option value="">Sélectionner...</option>
                             <?php foreach ($instituts as $inst) : ?>
-                                <option value="<?= $inst['id'] ?>"><?= htmlspecialchars($inst['sigle'] . ' - ' . $inst['nom']) ?></option>
+                                <option value="<?= $inst['id'] ?>"><?= Security::h($inst['sigle'] . ' - ' . $inst['nom']) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -289,7 +293,7 @@ $etudiants = db()->fetchAll("
                     <div class="col-md-2">
                         <label class="form-label">Année *</label>
                         <select class="form-select" name="annee_academique_id" required>
-                            <option value="<?= $anneeCourante['id'] ?? '' ?>"><?= htmlspecialchars($anneeCourante['annee'] ?? 'Sélectionner') ?></option>
+                            <option value="<?= $anneeCourante['id'] ?? '' ?>"><?= Security::h($anneeCourante['annee'] ?? 'Sélectionner') ?></option>
                         </select>
                     </div>
                     <div class="col-md-4">
@@ -335,36 +339,21 @@ $etudiants = db()->fetchAll("
 </div>
 
 <form id="deleteForm" method="POST" style="display:none;">
+    <?= Security::csrfField() ?>
     <input type="hidden" name="action" value="delete">
     <input type="hidden" name="id" id="deleteId">
 </form>
 
-<style>
-.student-avatar {
-    width: 40px;
-    height: 40px;
-    background: var(--primary);
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-    font-size: 14px;
-}
-.page-actions .filters {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-.page-actions .form-select {
-    width: auto;
-    min-width: 160px;
-}
-</style>
+
 
 <script>
-const filieresParInstitut = <?= json_encode($filieres) ?>;
+<?php
+$filiereData = [];
+foreach ($filieres as $f) {
+    $filiereData[] = ['id' => $f['id'], 'nom' => $f['nom'], 'institut_id' => $f['institut_id']];
+}
+?>
+const filieresParInstitut = <?= Security::safeJson($filiereData) ?>;
 
 document.addEventListener('DOMContentLoaded', function() {
     const table = $('#etudiantsTable').DataTable({
@@ -392,7 +381,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (instId) {
             const filieres = filieresParInstitut.filter(f => f.institut_id == instId);
             filieres.forEach(f => {
-                filiereSelect.innerHTML += `<option value="${f.id}">${f.nom}</option>`;
+                const opt = document.createElement('option');
+                opt.value = f.id;
+                opt.textContent = f.nom;
+                filiereSelect.appendChild(opt);
             });
         }
     });
@@ -402,7 +394,7 @@ function openModal(type, action, id = null) {
     const modal = new bootstrap.Modal(document.getElementById('etudiantModal'));
     document.getElementById('formAction').value = action;
     document.getElementById('formId').value = id || '';
-    document.getElementById('modalTitle').textContent = action === 'create' ? 'Nouvel Étudiant' : 'Modifier l\'Étudiant';
+    document.getElementById('modalTitle').textContent = action === 'create' ? 'Nouvel Étudiant' : "Modifier l'Étudiant";
     document.getElementById('statutField').style.display = action === 'edit' ? 'block' : 'none';
     
     if (action === 'edit' && id) {
@@ -429,7 +421,10 @@ function openModal(type, action, id = null) {
                 
                 const filieres = filieresParInstitut.filter(f => f.institut_id == data.filiere_id);
                 filieres.forEach(f => {
-                    filiereSelect.innerHTML += `<option value="${f.id}">${f.nom}</option>`;
+                    const opt = document.createElement('option');
+                    opt.value = f.id;
+                    opt.textContent = f.nom;
+                    filiereSelect.appendChild(opt);
                 });
                 document.querySelector('[name="filiere_id"]').value = data.filiere_id || '';
             });
@@ -442,26 +437,27 @@ function viewEtudiant(id) {
     fetch(`?page=etudiants&action=get&id=${id}`)
         .then(r => r.json())
         .then(data => {
+            const safe = (v) => { const d = document.createElement('div'); d.textContent = v ?? ''; return d.innerHTML; };
             document.getElementById('viewContent').innerHTML = `
                 <div class="row">
                     <div class="col-md-4 text-center">
                         <div class="student-avatar" style="width:100px;height:100px;font-size:36px;margin:0 auto 20px;">
-                            ${data.prenom[0]}${data.nom[0]}
+                            ${safe(data.prenom ? data.prenom[0] : '')}${safe(data.nom ? data.nom[0] : '')}
                         </div>
-                        <h4>${data.prenom} ${data.nom}</h4>
-                        <p class="text-muted">${data.numero}</p>
-                        <span class="badge bg-${data.statut === 'actif' ? 'success' : 'secondary'}">${data.statut}</span>
+                        <h4>${safe(data.prenom)} ${safe(data.nom)}</h4>
+                        <p class="text-muted">${safe(data.numero)}</p>
+                        <span class="badge bg-${data.statut === 'actif' ? 'success' : 'secondary'}">${safe(data.statut)}</span>
                     </div>
                     <div class="col-md-8">
                         <table class="table table-sm">
-                            <tr><th>Institut:</th><td><span class="badge bg-${data.institut === 'ISTPK' ? 'primary' : 'info'}">${data.institut}</span> ${data.institut_nom}</td></tr>
-                            <tr><th>Filière DUT:</th><td>${data.filiere}</td></tr>
-                            <tr><th>Semestre:</th><td><span class="badge bg-secondary">${data.semestre}</span></td></tr>
+                            <tr><th>Institut:</th><td><span class="badge bg-${data.institut === 'ISTPK' ? 'primary' : 'info'}">${safe(data.institut)}</span> ${safe(data.institut_nom)}</td></tr>
+                            <tr><th>Filière DUT:</th><td>${safe(data.filiere)}</td></tr>
+                            <tr><th>Semestre:</th><td><span class="badge bg-secondary">${safe(data.semestre)}</span></td></tr>
                             <tr><th>Sexe:</th><td>${data.sexe === 'M' ? 'Masculin' : 'Féminin'}</td></tr>
-                            <tr><th>Date de naissance:</th><td>${data.date_naissance}</td></tr>
-                            <tr><th>Nationalité:</th><td>${data.nationalite}</td></tr>
-                            <tr><th>Téléphone:</th><td>${data.telephone || '-'}</td></tr>
-                            <tr><th>Email:</th><td>${data.email || '-'}</td></tr>
+                            <tr><th>Date de naissance:</th><td>${safe(data.date_naissance)}</td></tr>
+                            <tr><th>Nationalité:</th><td>${safe(data.nationalite)}</td></tr>
+                            <tr><th>Téléphone:</th><td>${safe(data.telephone || '-')}</td></tr>
+                            <tr><th>Email:</th><td>${safe(data.email || '-')}</td></tr>
                             <tr><th>Boursier:</th><td>${data.boursier ? 'Oui' : 'Non'}</td></tr>
                         </table>
                     </div>
@@ -469,6 +465,60 @@ function viewEtudiant(id) {
             `;
             new bootstrap.Modal(document.getElementById('viewModal')).show();
         });
+}
+
+function viewProfile(id) {
+    fetch('?page=etudiants&action=get&id=' + id)
+        .then(r => r.json())
+        .then(function(data) {
+            const esc = (s) => { var d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; };
+            var html = '<div class="row">' +
+                '<div class="col-md-4 text-center mb-3">' +
+                '<div class="student-avatar" style="width:100px;height:100px;font-size:36px;margin:0 auto 16px;">' + esc(data.prenom ? data.prenom[0] : '') + esc(data.nom ? data.nom[0] : '') + '</div>' +
+                '<h5>' + esc(data.prenom) + ' ' + esc(data.nom) + '</h5>' +
+                '<p class="text-muted">' + esc(data.numero) + '</p>' +
+                '<button class="btn btn-sm btn-outline-primary mb-2" onclick="document.getElementById(\'photoUpload\').click()"><i class="bi bi-camera"></i> Photo</button>' +
+                '<input type="file" id="photoUpload" accept="image/*" style="display:none" onchange="uploadPhoto(' + id + ', this)">' +
+                '</div>' +
+                '<div class="col-md-8"><table class="table table-sm">' +
+                '<tr><th>Institut:</th><td>' + esc(data.institut) + ' - ' + esc(data.institut_nom) + '</td></tr>' +
+                '<tr><th>Filière:</th><td>' + esc(data.filiere) + '</td></tr>' +
+                '<tr><th>Semestre:</th><td><span class="badge bg-secondary">' + esc(data.semestre) + '</span></td></tr>' +
+                '<tr><th>Sexe:</th><td>' + (data.sexe === 'M' ? 'Masculin' : 'Féminin') + '</td></tr>' +
+                '<tr><th>Date naissance:</th><td>' + esc(data.date_naissance) + '</td></tr>' +
+                '<tr><th>Nationalité:</th><td>' + esc(data.nationalite) + '</td></tr>' +
+                '<tr><th>Téléphone:</th><td>' + esc(data.telephone || '-') + '</td></tr>' +
+                '<tr><th>Email:</th><td>' + esc(data.email || '-') + '</td></tr>' +
+                '<tr><th>Statut:</th><td><span class="badge bg-' + (data.statut === 'actif' ? 'success' : 'secondary') + '">' + esc(data.statut) + '</span></td></tr>' +
+                '<tr><th>Boursier:</th><td>' + (data.boursier ? 'Oui' : 'Non') + '</td></tr>' +
+                '</table></div></div>' +
+                '<div class="row mt-3"><div class="col-12 text-end">' +
+                '<a href="../api/export.php?type=releve&id=' + id + '" class="btn btn-sm btn-success" target="_blank"><i class="bi bi-file-pdf"></i> Relevé de notes</a>' +
+                '<a href="../api/export.php?type=bulletin&id=' + id + '" class="btn btn-sm btn-info ms-2" target="_blank"><i class="bi bi-file-pdf"></i> Bulletin</a>' +
+                '</div></div>';
+
+            document.getElementById('viewContent').innerHTML = html;
+            new bootstrap.Modal(document.getElementById('viewModal')).show();
+        });
+}
+
+function uploadPhoto(id, input) {
+    if (!input.files || !input.files[0]) return;
+    var formData = new FormData();
+    formData.append('id', id);
+    formData.append('photo', input.files[0]);
+    fetch('api/upload_photo.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.success) {
+            showToast('Photo mise à jour', 'success');
+        } else {
+            showToast(data.error || 'Erreur', 'error');
+        }
+    });
 }
 
 function confirmDelete(id) {

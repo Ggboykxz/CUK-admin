@@ -1,0 +1,176 @@
+version: '3.8'
+
+name: cuk-admin-prod
+
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: cuk-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - .:/var/www/html:ro
+      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./docker/ssl:/etc/ssl:ro
+      - runtime_data:/var/www/html/runtime
+    depends_on:
+      - php-fpm
+    restart: unless-stopped
+    networks:
+      - cuk-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  php-fpm:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.prod
+    container_name: cuk-php
+    environment:
+      APP_ENV: production
+      DB_DRIVER: mysql
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_NAME: cuk_admin
+      DB_USER: cuk_user
+      DB_PASSWORD: ${DB_PASSWORD:-chang3_m3_n0w!}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PREFIX: cuk_session:
+      MAINTENANCE_MODE: ${MAINTENANCE_MODE:-false}
+    volumes:
+      - .:/var/www/html:ro
+      - runtime_data:/var/www/html/runtime
+      - database_data:/var/www/html/database
+      - uploads_data:/var/www/html/uploads
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - cuk-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  mariadb:
+    image: mariadb:10.11
+    container_name: cuk-db
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-r00t_ch4ng3_m3!}
+      MYSQL_DATABASE: cuk_admin
+      MYSQL_USER: cuk_user
+      MYSQL_PASSWORD: ${DB_PASSWORD:-chang3_m3_n0w!}
+    ports:
+      - "127.0.0.1:3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - cuk-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  redis:
+    image: redis:7-alpine
+    container_name: cuk-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - cuk-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: cuk-pma
+    ports:
+      - "127.0.0.1:8080:80"
+    environment:
+      PMA_HOST: mariadb
+      PMA_PORT: 3306
+      UPLOAD_LIMIT: 100M
+      PMA_USER: root
+      PMA_PASSWORD: ${MYSQL_ROOT_PASSWORD:-r00t_ch4ng3_m3!}
+    depends_on:
+      - mariadb
+    profiles:
+      - debug
+    restart: unless-stopped
+    networks:
+      - cuk-network
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.prod
+    container_name: cuk-scheduler
+    command: >
+      sh -c "echo '*/5 * * * * php /var/www/html/scheduler/tasks.php >> /var/log/scheduler.log 2>&1' | crontab - && crond -f -l 2"
+    environment:
+      APP_ENV: production
+      DB_DRIVER: mysql
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_NAME: cuk_admin
+      DB_USER: cuk_user
+      DB_PASSWORD: ${DB_PASSWORD:-chang3_m3_n0w!}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    volumes:
+      - .:/var/www/html:ro
+      - runtime_data:/var/www/html/runtime
+      - database_data:/var/www/html/database
+    depends_on:
+      - mariadb
+      - redis
+    restart: unless-stopped
+    networks:
+      - cuk-network
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+  runtime_data:
+    driver: local
+  database_data:
+    driver: local
+  uploads_data:
+    driver: local
+
+networks:
+  cuk-network:
+    driver: bridge

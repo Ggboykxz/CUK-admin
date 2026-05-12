@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: cuk-admin
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/var/www/html
+      - ./database:/var/www/html/database
+    environment:
+      - DB_DRIVER=mysql
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_NAME=cuk_admin
+      - DB_USER=cuk_user
+      - DB_PASSWORD=cuk_password
+      - APP_ENV=development
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: mariadb:10.11
+    container_name: cuk-db
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: cuk_admin
+      MYSQL_USER: cuk_user
+      MYSQL_PASSWORD: cuk_password
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 10s
+      retries: 10
+    restart: unless-stopped
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: cuk-pma
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      UPLOAD_LIMIT: 100M
+    depends_on:
+      - db
+    restart: unless-stopped
+
+volumes:
+  mysql_data:

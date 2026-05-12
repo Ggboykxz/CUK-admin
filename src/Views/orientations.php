@@ -1,21 +1,35 @@
 <?php
+
+declare(strict_types=1);
+
+require_once __DIR__ . '/../../src/Security.php';
+
+Security::initSession();
+Security::requireAuth();
+
 $anneeCourante = db()->fetch("SELECT id, annee FROM annees_academiques WHERE courante = 1");
 $filieres = db()->fetchAll("SELECT * FROM filieres WHERE active = 1 ORDER BY nom");
-$niveaux = db()->fetchAll("SELECT * FROM niveaux WHERE active = 1 ORDER BY ordre");
 $etudiants = db()->fetchAll("SELECT id, numero, nom, prenom FROM etudiants WHERE annee_academique_id = ? AND statut = 'actif' ORDER BY nom", [$anneeCourante['id'] ?? 0]);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
+    if (!Security::validateCsrfToken($_POST['_csrf_token'] ?? '')) {
+        $_SESSION['error'] = 'Session expirée';
+        header('Location: ?page=orientations');
+        exit;
+    }
+
     if ($action === 'creer') {
+        $type = Security::validateEnum($_POST['type'] ?? '', ['orientation', 'transfert', 'reorientation', 'passage_licence'], 'orientation');
+
         $data = [
-            'etudiant_id' => intval($_POST['etudiant_id']),
-            'filiere_cible_id' => intval($_POST['filiere_cible_id']),
-            'niveau_cible_id' => intval($_POST['niveau_cible_id']),
-            'annee_academique_id' => intval($_POST['annee_academique_id']),
-            'type' => $_POST['type'],
+            'etudiant_id' => Security::validateInt($_POST['etudiant_id']),
+            'filiere_cible_id' => Security::validateInt($_POST['filiere_cible_id']),
+            'annee_academique_id' => Security::validateInt($_POST['annee_academique_id']),
+            'type' => $type,
             'mention' => trim($_POST['mention'] ?? ''),
-            'rang' => $_POST['rang'] ? intval($_POST['rang']) : null,
+            'rang' => !empty($_POST['rang']) ? Security::validateInt($_POST['rang']) : null,
             'avis_enseignant' => trim($_POST['avis_enseignant'] ?? ''),
             'decision' => 'en_attente',
             'utilisateur_id' => $_SESSION['user_id'],
@@ -23,10 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ];
 
         if (!empty($_POST['filiere_origine_id'])) {
-            $data['filiere_origine_id'] = intval($_POST['filiere_origine_id']);
-        }
-        if (!empty($_POST['niveau_origine_id'])) {
-            $data['niveau_origine_id'] = intval($_POST['niveau_origine_id']);
+            $data['filiere_origine_id'] = Security::validateInt($_POST['filiere_origine_id']);
         }
 
         db()->insert('orientations', $data);
@@ -36,8 +47,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'decider') {
-        $id = intval($_POST['id']);
-        $decision = $_POST['decision'];
+        $id = Security::validateInt($_POST['id']);
+        $decision = Security::validateEnum($_POST['decision'] ?? '', ['accepte', 'refuse', 'en_attente', 'report'], 'en_attente');
 
         db()->update('orientations', [
             'decision' => $decision,
@@ -48,11 +59,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($decision === 'accepte') {
             $orientation = db()->fetch("SELECT * FROM orientations WHERE id = ?", [$id]);
-            db()->update('etudiants', [
-                'filiere_id' => $orientation['filiere_cible_id'],
-                'niveau_id' => $orientation['niveau_cible_id'],
-                'statut' => 'actif'
-            ], 'id = :id', ['id' => $orientation['etudiant_id']]);
+            if ($orientation) {
+                db()->update('etudiants', [
+                    'filiere_id' => $orientation['filiere_cible_id'],
+                    'statut' => 'actif'
+                ], 'id = :id', ['id' => $orientation['etudiant_id']]);
+            }
         }
 
         $_SESSION['success'] = 'Décision enregistrée';
@@ -61,26 +73,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-if (isset($_SESSION['success'])) {
-    echo '<div class="alert alert-success alert-dismissible fade show" role="alert">
-        <i class="bi bi-check-circle"></i> ' . $_SESSION['success'] . '
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>';
-    unset($_SESSION['success']);
-}
+Security::showSuccess();
+Security::showError();
 
-$orientations = db()->fetchAll("
-    SELECT o.*, e.numero, e.nom, e.prenom,
-           fo.nom as filiere_origine, fc.nom as filiere_cible,
-           no.nom as niveau_origine, nc.nom as niveau_cible
-    FROM orientations o
-    JOIN etudiants e ON o.etudiant_id = e.id
-    LEFT JOIN filieres fo ON o.filiere_origine_id = fo.id
-    LEFT JOIN filieres fc ON o.filiere_cible_id = fc.id
-    LEFT JOIN niveaux no ON o.niveau_origine_id = no.id
-    LEFT JOIN niveaux nc ON o.niveau_cible_id = nc.id
-    ORDER BY o.date_orientation DESC
-");
+$orientations = db()->fetchAll("SELECT o.*, e.numero, e.nom, e.prenom, fo.nom as filiere_origine, fc.nom as filiere_cible FROM orientations o JOIN etudiants e ON o.etudiant_id = e.id LEFT JOIN filieres fo ON o.filiere_origine_id = fo.id LEFT JOIN filieres fc ON o.filiere_cible_id = fc.id ORDER BY o.date_orientation DESC");
 ?>
 
 <div class="orientations-page">
@@ -90,6 +86,7 @@ $orientations = db()->fetchAll("
         </div>
         <div class="card-body">
             <form method="POST" class="row g-3">
+                <?= Security::csrfField() ?>
                 <input type="hidden" name="action" value="creer">
                 <input type="hidden" name="annee_academique_id" value="<?= $anneeCourante['id'] ?? '' ?>">
                 
@@ -98,7 +95,7 @@ $orientations = db()->fetchAll("
                     <select class="form-select" name="etudiant_id" required>
                         <option value="">Sélectionner...</option>
                         <?php foreach ($etudiants as $e) : ?>
-                            <option value="<?= $e['id'] ?>"><?= htmlspecialchars($e['nom'] . ' ' . $e['prenom'] . ' (' . $e['numero'] . ')') ?></option>
+                            <option value="<?= $e['id'] ?>"><?= Security::h($e['nom'] . ' ' . $e['prenom'] . ' (' . $e['numero'] . ')') ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -108,7 +105,7 @@ $orientations = db()->fetchAll("
                         <option value="orientation">Orientation</option>
                         <option value="transfert">Transfert</option>
                         <option value="reorientation">Réorientation</option>
-                        <option value="specialisation">Spécialisation</option>
+                        <option value="passage_licence">Passage Licence</option>
                     </select>
                 </div>
                 <div class="col-md-3">
@@ -116,16 +113,7 @@ $orientations = db()->fetchAll("
                     <select class="form-select" name="filiere_cible_id" required>
                         <option value="">Sélectionner...</option>
                         <?php foreach ($filieres as $f) : ?>
-                            <option value="<?= $f['id'] ?>"><?= htmlspecialchars($f['nom']) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Niveau cible *</label>
-                    <select class="form-select" name="niveau_cible_id" required>
-                        <option value="">Sélectionner...</option>
-                        <?php foreach ($niveaux as $n) : ?>
-                            <option value="<?= $n['id'] ?>"><?= htmlspecialchars($n['nom']) ?></option>
+                            <option value="<?= $f['id'] ?>"><?= Security::h($f['nom']) ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -171,22 +159,16 @@ $orientations = db()->fetchAll("
                     <?php foreach ($orientations as $o) : ?>
                     <tr>
                         <td>
-                            <strong><?= htmlspecialchars($o['prenom'] . ' ' . $o['nom']) ?></strong>
-                            <small class="d-block text-muted"><?= htmlspecialchars($o['numero']) ?></small>
+                            <strong><?= Security::h($o['prenom'] . ' ' . $o['nom']) ?></strong>
+                            <small class="d-block text-muted"><?= Security::h($o['numero']) ?></small>
                         </td>
                         <td>
                             <span class="badge bg-secondary"><?= ucfirst($o['type']) ?></span>
                         </td>
+                        <td><?= Security::h($o['filiere_origine'] ?? '-') ?></td>
+                        <td><?= Security::h($o['filiere_cible'] ?? '-') ?></td>
                         <td>
-                            <?= htmlspecialchars($o['filiere_origine'] ?? '-') ?>
-                            <small class="d-block text-muted"><?= htmlspecialchars($o['niveau_origine'] ?? '') ?></small>
-                        </td>
-                        <td>
-                            <?= htmlspecialchars($o['filiere_cible'] ?? '-') ?>
-                            <small class="d-block text-muted"><?= htmlspecialchars($o['niveau_cible'] ?? '') ?></small>
-                        </td>
-                        <td>
-                            <?= htmlspecialchars($o['mention'] ?: '-') ?>
+                            <?= Security::h($o['mention'] ?: '-') ?>
                             <?php if ($o['rang']) : ?>
                                 <small class="d-block text-muted">Rang: <?= $o['rang'] ?></small>
                             <?php endif; ?>
@@ -219,6 +201,7 @@ $orientations = db()->fetchAll("
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST">
+                <?= Security::csrfField() ?>
                 <div class="modal-body">
                     <input type="hidden" name="action" value="decider">
                     <input type="hidden" name="id" id="deciderId">

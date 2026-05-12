@@ -1,20 +1,29 @@
 <?php
-if ($_SESSION['user_role'] !== 'root' && $_SESSION['user_role'] !== 'administrateur') {
-    header('Location: ?page=dashboard');
-    exit;
-}
+
+declare(strict_types=1);
+
+require_once __DIR__ . '/../../src/Security.php';
+
+Security::initSession();
+Security::requireRole('root', 'administrateur');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
+    if (!Security::validateCsrfToken($_POST['_csrf_token'] ?? '')) {
+        $_SESSION['error'] = 'Session expirée';
+        header('Location: ?page=utilisateurs');
+        exit;
+    }
+
     if ($action === 'create') {
         $data = [
-            'username' => trim($_POST['username']),
-            'password_hash' => password_hash($_POST['password'], PASSWORD_DEFAULT),
-            'role' => $_POST['role'],
-            'nom' => trim($_POST['nom']),
-            'prenom' => trim($_POST['prenom']),
-            'email' => trim($_POST['email'] ?? ''),
+            'username' => trim($_POST['username'] ?? ''),
+            'password_hash' => password_hash($_POST['password'] ?? '', PASSWORD_BCRYPT),
+            'role' => Security::validateEnum($_POST['role'] ?? '', ['root', 'administrateur', 'secretaire', 'professeur'], 'secretaire'),
+            'nom' => trim($_POST['nom'] ?? ''),
+            'prenom' => trim($_POST['prenom'] ?? ''),
+            'email' => Security::validateEmail($_POST['email'] ?? ''),
             'telephone' => trim($_POST['telephone'] ?? ''),
             'actif' => 1
         ];
@@ -26,18 +35,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'update') {
-        $id = intval($_POST['id']);
+        $id = Security::validateInt($_POST['id']);
         $data = [
-            'nom' => trim($_POST['nom']),
-            'prenom' => trim($_POST['prenom']),
-            'email' => trim($_POST['email'] ?? ''),
+            'nom' => trim($_POST['nom'] ?? ''),
+            'prenom' => trim($_POST['prenom'] ?? ''),
+            'email' => Security::validateEmail($_POST['email'] ?? ''),
             'telephone' => trim($_POST['telephone'] ?? ''),
-            'role' => $_POST['role'],
+            'role' => Security::validateEnum($_POST['role'] ?? '', ['administrateur', 'secretaire', 'professeur'], 'secretaire'),
             'actif' => isset($_POST['actif']) ? 1 : 0
         ];
 
         if (!empty($_POST['password'])) {
-            $data['password_hash'] = password_hash($_POST['password'], PASSWORD_DEFAULT);
+            $data['password_hash'] = password_hash($_POST['password'], PASSWORD_BCRYPT);
         }
 
         db()->update('users', $data, 'id = :id', ['id' => $id]);
@@ -47,20 +56,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'delete') {
-        db()->delete('users', 'id = :id', ['id' => intval($_POST['id'])]);
+        db()->delete('users', 'id = :id', ['id' => Security::validateInt($_POST['id'])]);
         $_SESSION['success'] = 'Utilisateur supprimé';
         header('Location: ?page=utilisateurs');
         exit;
     }
 }
 
-if (isset($_SESSION['success'])) {
-    echo '<div class="alert alert-success alert-dismissible fade show" role="alert">
-        <i class="bi bi-check-circle"></i> ' . $_SESSION['success'] . '
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>';
-    unset($_SESSION['success']);
-}
+Security::showSuccess();
+Security::showError();
 
 $utilisateurs = db()->fetchAll("SELECT * FROM users ORDER BY role, nom");
 $journal = db()->fetchAll("SELECT j.*, u.username FROM journal_activite j LEFT JOIN users u ON j.user_id = u.id ORDER BY j.created_at DESC LIMIT 50");
@@ -84,6 +88,7 @@ $journal = db()->fetchAll("SELECT j.*, u.username FROM journal_activite j LEFT J
                 </div>
                 <div class="card-body">
                     <form method="POST" class="row g-3">
+                        <?= Security::csrfField() ?>
                         <input type="hidden" name="action" value="create">
                         <div class="col-md-2">
                             <label class="form-label">Nom d'utilisateur *</label>
@@ -96,7 +101,7 @@ $journal = db()->fetchAll("SELECT j.*, u.username FROM journal_activite j LEFT J
                         <div class="col-md-2">
                             <label class="form-label">Rôle *</label>
                             <select class="form-select" name="role" required>
-                                <?php if ($_SESSION['user_role'] === 'root') : ?>
+                                <?php if (($_SESSION['user_role'] ?? '') === 'root') : ?>
                                 <option value="root">Root</option>
                                 <?php endif; ?>
                                 <option value="administrateur">Administrateur</option>
@@ -145,10 +150,10 @@ $journal = db()->fetchAll("SELECT j.*, u.username FROM journal_activite j LEFT J
                             <?php foreach ($utilisateurs as $u) : ?>
                             <tr>
                                 <td>
-                                    <strong><?= htmlspecialchars($u['nom'] . ' ' . $u['prenom']) ?></strong>
-                                    <small class="d-block text-muted">@<?= htmlspecialchars($u['username']) ?></small>
+                                    <strong><?= Security::h($u['nom'] . ' ' . $u['prenom']) ?></strong>
+                                    <small class="d-block text-muted">@<?= Security::h($u['username']) ?></small>
                                 </td>
-                                <td><?= htmlspecialchars($u['email'] ?? '-') ?></td>
+                                <td><?= Security::h($u['email'] ?? '-') ?></td>
                                 <td>
                                     <span class="badge bg-<?= $u['role'] === 'root' ? 'dark' : ($u['role'] === 'administrateur' ? 'primary' : ($u['role'] === 'secretaire' ? 'info' : 'secondary')) ?>">
                                         <?= ucfirst($u['role']) ?>
@@ -198,10 +203,10 @@ $journal = db()->fetchAll("SELECT j.*, u.username FROM journal_activite j LEFT J
                             <?php foreach ($journal as $j) : ?>
                             <tr>
                                 <td><?= date('d/m/Y H:i', strtotime($j['created_at'])) ?></td>
-                                <td><?= htmlspecialchars($j['username'] ?? 'System') ?></td>
-                                <td><span class="badge bg-secondary"><?= htmlspecialchars($j['action']) ?></span></td>
-                                <td><?= htmlspecialchars($j['details'] ?? '-') ?></td>
-                                <td><small><?= htmlspecialchars($j['ip_address'] ?? '-') ?></small></td>
+                                <td><?= Security::h($j['username'] ?? 'System') ?></td>
+                                <td><span class="badge bg-secondary"><?= Security::h($j['action']) ?></span></td>
+                                <td><?= Security::h($j['details'] ?? '-') ?></td>
+                                <td><small><?= Security::h($j['ip_address'] ?? '-') ?></small></td>
                             </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -220,6 +225,7 @@ $journal = db()->fetchAll("SELECT j.*, u.username FROM journal_activite j LEFT J
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST">
+                <?= Security::csrfField() ?>
                 <div class="modal-body">
                     <input type="hidden" name="action" value="update">
                     <input type="hidden" name="id" id="editId">
@@ -270,12 +276,26 @@ $journal = db()->fetchAll("SELECT j.*, u.username FROM journal_activite j LEFT J
 </div>
 
 <form id="deleteForm" method="POST" style="display:none;">
+    <?= Security::csrfField() ?>
     <input type="hidden" name="action" value="delete">
     <input type="hidden" name="id" id="deleteId">
 </form>
 
 <script>
-const users = <?= json_encode($utilisateurs) ?>;
+<?php
+$userData = array_map(function($u) {
+    return [
+        'id' => $u['id'],
+        'nom' => $u['nom'],
+        'prenom' => $u['prenom'],
+        'email' => $u['email'],
+        'telephone' => $u['telephone'],
+        'role' => $u['role'],
+        'actif' => $u['actif']
+    ];
+}, $utilisateurs);
+?>
+const users = <?= Security::safeJson($userData) ?>;
 
 function editUser(id) {
     const u = users.find(x => x.id == id);

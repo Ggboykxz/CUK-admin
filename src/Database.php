@@ -1,12 +1,14 @@
 <?php
 
-namespace CUKAdmin;
+declare(strict_types=1);
+
+namespace CUK;
 
 class Database
 {
     private static ?Database $instance = null;
-    private $connection;
-    private $driver;
+    private \PDO $connection;
+    private string $driver;
 
     private function __construct()
     {
@@ -26,15 +28,17 @@ class Database
                 $dsn,
                 $config['username'],
                 $config['password'],
-                $config['options']
+                $config['options'] ?? []
             );
         } else {
-            $dbPath = __DIR__ . '/../' . ($config['database'] ?? 'database/cuk_admin.sqlite');
-            $this->connection = new \PDO('sqlite:' . $dbPath);
-            $this->connection->setAttribute(
-                \PDO::ATTR_ERRMODE,
-                \PDO::ERRMODE_EXCEPTION
-            );
+            $dbPath = $config['database'] ?? 'database/cuk_admin.sqlite';
+            $resolved = realpath(__DIR__ . '/../' . $dbPath);
+            if ($resolved === false || strpos($resolved, realpath(__DIR__ . '/../database')) !== 0) {
+                $resolved = __DIR__ . '/../database/cuk_admin.sqlite';
+            }
+            $this->connection = new \PDO('sqlite:' . $resolved);
+            $this->connection->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+            $this->connection->exec('PRAGMA foreign_keys = ON');
         }
     }
 
@@ -77,7 +81,12 @@ class Database
 
     public function insert(string $table, array $data): int
     {
-        $columns = implode(', ', array_keys($data));
+        $this->validateTableName($table);
+        $safeKeys = [];
+        foreach (array_keys($data) as $col) {
+            $safeKeys[] = $this->quoteIdentifier($col);
+        }
+        $columns = implode(', ', $safeKeys);
         $placeholders = ':' . implode(', :', array_keys($data));
 
         $sql = "INSERT INTO {$table} ({$columns}) VALUES ({$placeholders})";
@@ -92,9 +101,11 @@ class Database
         string $where,
         array $whereParams = []
     ): int {
+        $this->validateTableName($table);
         $set = [];
         foreach (array_keys($data) as $column) {
-            $set[] = "{$column} = :{$column}";
+            $safeCol = $this->quoteIdentifier($column);
+            $set[] = "{$safeCol} = :{$column}";
         }
         $setString = implode(', ', $set);
 
@@ -106,6 +117,7 @@ class Database
 
     public function delete(string $table, string $where, array $params = []): int
     {
+        $this->validateTableName($table);
         $sql = "DELETE FROM {$table} WHERE {$where}";
         $stmt = $this->query($sql, $params);
         return $stmt->rowCount();
@@ -126,6 +138,21 @@ class Database
         return $this->connection->rollBack();
     }
 
+    private function validateTableName(string $table): void
+    {
+        if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $table)) {
+            throw new \InvalidArgumentException("Nom de table invalide: {$table}");
+        }
+    }
+
+    private function quoteIdentifier(string $name): string
+    {
+        if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $name)) {
+            throw new \InvalidArgumentException("Nom de colonne invalide: {$name}");
+        }
+        return $this->driver === 'mysql' ? "`{$name}`" : "\"{$name}\"";
+    }
+
     private function convertMysqlToSqlite(string $sql): string
     {
         $sql = preg_replace(
@@ -140,59 +167,19 @@ class Database
         );
         $sql = preg_replace('/ENGINE\s*=\s*InnoDB/i', '', $sql);
         $sql = preg_replace('/DEFAULT\s+CHARSET\s*=\s*utf8mb4/i', '', $sql);
-        $sql = preg_replace(
-            '/COLLATE\s*=\s*utf8mb4_unicode_ci/i',
-            '',
-            $sql
-        );
+        $sql = preg_replace('/COLLATE\s*=\s*utf8mb4_unicode_ci/i', '', $sql);
         $sql = preg_replace('/CHARACTER\s+SET\s*utf8mb4/i', '', $sql);
         $sql = preg_replace('/TINYINT\(1\)/i', 'INTEGER', $sql);
         $sql = preg_replace('/INT\(\d+\)/i', 'INTEGER', $sql);
         $sql = preg_replace('/BIGINT\(\d+\)/i', 'INTEGER', $sql);
         $sql = preg_replace('/DECIMAL\(\d+,\d+\)/i', 'REAL', $sql);
         $sql = preg_replace('/DOUBLE/i', 'REAL', $sql);
-        $sql = preg_replace(
-            '/ENUM\([^)]+\)/i',
-            'VARCHAR(50)',
-            $sql
-        );
-        $sql = preg_replace(
-            '/SET\s+NULL/i',
-            'NULL',
-            $sql
-        );
-        $sql = preg_replace(
-            '/SET\s+RESTRICT/i',
-            'RESTRICT',
-            $sql
-        );
-        $sql = preg_replace(
-            '/ON\s+DELETE\s+CASCADE/i',
-            '',
-            $sql
-        );
-        $sql = preg_replace(
-            '/ON\s+UPDATE\s+CURRENT_TIMESTAMP/i',
-            '',
-            $sql
-        );
-        $sql = preg_replace(
-            '/ON\s+DELETE\s+RESTRICT/i',
-            '',
-            $sql
-        );
+        $sql = preg_replace('/ENUM\([^)]+\)/i', 'VARCHAR(50)', $sql);
         $sql = preg_replace('/NOW\(\)/i', 'CURRENT_TIMESTAMP', $sql);
-        $sql = preg_replace(
-            '/CURRENT_TIMESTAMP\(\)/i',
-            'CURRENT_TIMESTAMP',
-            $sql
-        );
+        $sql = preg_replace('/CURRENT_TIMESTAMP\(\)/i', 'CURRENT_TIMESTAMP', $sql);
 
         return trim($sql);
     }
 }
 
-function db(): Database
-{
-    return Database::getInstance();
-}
+
