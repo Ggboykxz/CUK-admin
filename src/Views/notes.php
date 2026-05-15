@@ -71,25 +71,43 @@ if (isset($_GET['action'])) {
             exit;
         }
 
-        $ues = db()->fetchAll("SELECT * FROM ues WHERE semestre_id = ? AND active = 1", [$semestreData['id']]);
+        $ecs = db()->fetchAll(
+            "SELECT ec.id as ec_id, ec.code as ec_code, ec.nom as ec_nom, ec.coefficient,
+                    ue.id as ue_id, ue.code as ue_code, ue.nom as ue_nom, ue.credits as ue_credits,
+                    n.moyenne_ec
+             FROM ues ue
+             JOIN ecs ec ON ec.ue_id = ue.id AND ec.active = 1
+             LEFT JOIN notes n ON n.ec_id = ec.id AND n.etudiant_id = ? AND n.annee_academique_id = ?
+             WHERE ue.semestre_id = ? AND ue.active = 1
+             ORDER BY ue.code, ec.code",
+            [$etudiantId, $anneeId, $semestreData['id']]
+        );
+
         $resultats = [];
+        $uesGrouped = [];
+        foreach ($ecs as $ec) {
+            $uesGrouped[$ec['ue_id']]['ue'] = [
+                'id' => $ec['ue_id'],
+                'code' => $ec['ue_code'],
+                'nom' => $ec['ue_nom'],
+                'credits' => $ec['ue_credits'],
+            ];
+            $uesGrouped[$ec['ue_id']]['ecs'][] = $ec;
+        }
+
         $totalMoyenne = 0;
-        $totalCredits = 0;
         $totalCreditsUE = 0;
 
-        foreach ($ues as $ue) {
-            $ecs = db()->fetchAll("SELECT * FROM ecs WHERE ue_id = ? AND active = 1", [$ue['id']]);
+        foreach ($uesGrouped as $groupId => $group) {
+            $ue = $group['ue'];
+            $ecList = $group['ecs'];
             $moyenneUe = 0;
             $totalCoefUe = 0;
-            $creditsUe = 0;
 
-            foreach ($ecs as $ec) {
-                $note = db()->fetch("SELECT * FROM notes WHERE etudiant_id = ? AND ec_id = ? AND annee_academique_id = ?", [$etudiantId, $ec['id'], $anneeId]);
-
-                if ($note && $note['moyenne_ec'] !== null) {
-                    $moyenneUe += floatval($note['moyenne_ec']) * floatval($ec['coefficient']);
+            foreach ($ecList as $ec) {
+                if ($ec['moyenne_ec'] !== null) {
+                    $moyenneUe += floatval($ec['moyenne_ec']) * floatval($ec['coefficient']);
                     $totalCoefUe += floatval($ec['coefficient']);
-                    $creditsUe += floatval($ec['coefficient']);
                 }
             }
 
@@ -98,7 +116,6 @@ if (isset($_GET['action'])) {
 
             if ($moyenneUeFinale !== null) {
                 $totalMoyenne += $moyenneUe;
-                $totalCredits += $creditsUe;
                 $totalCreditsUE += floatval($ue['credits']);
             }
 

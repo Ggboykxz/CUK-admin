@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../src/bootstrap.php';
 
 use CUK\Security;
 
@@ -47,7 +47,9 @@ switch ($action) {
 
     case 'restore':
         $file = basename($_GET['file'] ?? '');
-        if (!$file || !file_exists($backupDir . $file)) {
+        $resolved = realpath($backupDir . $file);
+        $backupReal = realpath($backupDir);
+        if (!$file || !$resolved || !$backupReal || strpos($resolved, $backupReal) !== 0 || !file_exists($resolved)) {
             http_response_code(404);
             echo json_encode(['error' => 'Fichier non trouvé']);
             exit;
@@ -57,7 +59,7 @@ switch ($action) {
             $config = require __DIR__ . '/../config/database.php';
             if (($config['driver'] ?? 'sqlite') === 'sqlite') {
                 $dbPath = __DIR__ . '/../' . ($config['database'] ?? 'database/cuk_admin.sqlite');
-                copy($backupDir . $file, $dbPath);
+                copy($resolved, $dbPath);
             }
             Security::logActivity('restore', "Backup restauré: {$file}");
             echo json_encode(['success' => true, 'message' => "Base de données restaurée depuis: {$file}"]);
@@ -69,14 +71,15 @@ switch ($action) {
 
     case 'delete':
         $file = basename($_GET['file'] ?? '');
-        $path = $backupDir . $file;
-        if (file_exists($path)) {
-            unlink($path);
-            echo json_encode(['success' => true]);
-        } else {
+        $resolved = realpath($backupDir . $file);
+        $backupReal = realpath($backupDir);
+        if (!$file || !$resolved || !$backupReal || strpos($resolved, $backupReal) !== 0 || !file_exists($resolved)) {
             http_response_code(404);
             echo json_encode(['error' => 'Fichier non trouvé']);
+            exit;
         }
+        unlink($resolved);
+        echo json_encode(['success' => true]);
         break;
 
     case 'list':
@@ -111,21 +114,36 @@ function sqliteBackup(string $backupDir, string $dest): array
 function mysqlBackup(array $config, string $backupDir, string $filename, string &$dest): array
 {
     $dest = $backupDir . str_replace('.sqlite', '.sql', $filename);
-    $pdo = new \PDO("mysql:host={$config['host']};dbname={$config['database']};charset=utf8mb4", $config['username'] ?? '', $config['password'] ?? '');
+    $dsn = sprintf('mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4',
+        $config['host'] ?? 'localhost',
+        $config['port'] ?? 3306,
+        $config['database'] ?? ''
+    );
+    $pdo = new \PDO($dsn, $config['username'] ?? '', $config['password'] ?? '');
+    $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
     $tables = $pdo->query("SHOW TABLES")->fetchAll(\PDO::FETCH_COLUMN);
     $sql = "-- Backup: {$filename}\n-- Date: " . date('Y-m-d H:i:s') . "\n\n";
 
     foreach ($tables as $table) {
-        $create = $pdo->query("SHOW CREATE TABLE `{$table}`")->fetch(\PDO::FETCH_ASSOC);
+        $stmt = $pdo->prepare("SHOW CREATE TABLE `{$table}`");
+        $stmt->execute();
+        $create = $stmt->fetch(\PDO::FETCH_ASSOC);
         $sql .= $create['Create Table'] . ";\n\n";
-        $rows = $pdo->query("SELECT * FROM `{$table}`")->fetchAll(\PDO::FETCH_ASSOC);
+
+        $stmt = $pdo->prepare("SELECT * FROM `{$table}`");
+        $stmt->execute();
+        $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
         if (!empty($rows)) {
-            $columns = implode('`, `', array_keys($rows[0]));
+            $columns = implode('`, `', array_map(fn($c) => str_replace('`', '``', $c), array_keys($rows[0])));
+            $colNames = array_keys($rows[0]);
+            $placeholders = '(' . implode(', ', array_fill(0, count($colNames), '?')) . ')';
+            $insertSql = "INSERT INTO `{$table}` (`{$columns}`) VALUES ";
+            $rowSql = [];
             foreach ($rows as $row) {
-                $values = implode("', '", array_map(fn($v) => is_null($v) ? 'NULL' : str_replace("'", "''", (string)$v), array_values($row)));
-                $sql .= "INSERT INTO `{$table}` (`{$columns}`) VALUES ('{$values}');\n";
+                $vals = array_map(fn($v) => is_null($v) ? 'NULL' : $pdo->quote((string)$v), array_values($row));
+                $rowSql[] = '(' . implode(', ', $vals) . ')';
             }
-            $sql .= "\n";
+            $sql .= $insertSql . implode(",\n", $rowSql) . ";\n\n";
         }
     }
 

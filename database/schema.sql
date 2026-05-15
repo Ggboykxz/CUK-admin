@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS `users` (
     `telephone` VARCHAR(20),
     `actif` TINYINT(1) DEFAULT 1,
     `derniere_connexion` DATETIME,
+    `twofa_secret` VARCHAR(255),
+    `twofa_actif` TINYINT(1) DEFAULT 0,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -386,6 +388,65 @@ CREATE TABLE IF NOT EXISTS `notifications` (
     `lu` TINYINT(1) DEFAULT 0,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Table des salles
+CREATE TABLE IF NOT EXISTS `salles` (
+    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `code` VARCHAR(20) NOT NULL UNIQUE,
+    `nom` VARCHAR(200) NOT NULL,
+    `capacite` INT DEFAULT 30,
+    `batiment` VARCHAR(100),
+    `etage` INT DEFAULT 0,
+    `active` TINYINT(1) DEFAULT 1,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Table des cours/emploi du temps
+CREATE TABLE IF NOT EXISTS `cours` (
+    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `ec_id` INT UNSIGNED NOT NULL,
+    `enseignant_id` INT UNSIGNED,
+    `salle` VARCHAR(20),
+    `jour_semaine` INT NOT NULL DEFAULT 1,
+    `heure_debut` TIME NOT NULL,
+    `heure_fin` TIME NOT NULL,
+    `type_seance` VARCHAR(10) DEFAULT 'CM',
+    `groupe` VARCHAR(50),
+    `semestre` VARCHAR(5) DEFAULT 'S1',
+    `annee_academique_id` INT UNSIGNED NOT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`ec_id`) REFERENCES `ecs`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`enseignant_id`) REFERENCES `utilisateurs`(`id`) ON DELETE SET NULL,
+    FOREIGN KEY (`annee_academique_id`) REFERENCES `annees_academiques`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Table des messages internes
+CREATE TABLE IF NOT EXISTS `messages` (
+    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `sender_id` INT UNSIGNED NOT NULL,
+    `recipient_id` INT UNSIGNED,
+    `subject` VARCHAR(255) NOT NULL,
+    `body` TEXT,
+    `parent_id` INT UNSIGNED,
+    `read_at` DATETIME,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`sender_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`recipient_id`) REFERENCES `users`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Table des frais de scolarité
+CREATE TABLE IF NOT EXISTS `frais_scolarite` (
+    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `etudiant_id` INT UNSIGNED NOT NULL,
+    `annee_academique_id` INT UNSIGNED NOT NULL,
+    `montant_total` DECIMAL(10,2) NOT NULL DEFAULT 0,
+    `montant_paye` DECIMAL(10,2) DEFAULT 0,
+    `statut` VARCHAR(20) DEFAULT 'impaye',
+    `echeance` DATE,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`etudiant_id`) REFERENCES `etudiants`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`annee_academique_id`) REFERENCES `annees_academiques`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;

@@ -2,14 +2,15 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../src/bootstrap.php';
 
 use CUK\Security;
 
 header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Origin: null');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
+header('Access-Control-Allow-Credentials: true');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(204);
@@ -80,7 +81,13 @@ try {
 
         // PUT /etudiants/{id}
         case $method === 'PUT' && preg_match('#^/etudiants/(\d+)$#', $path, $m):
-            db()->update('etudiants', $body, 'id = :id', ['id' => (int)$m[1]]);
+            $allowed = ['nom', 'prenom', 'sexe', 'date_naissance', 'lieu_naissance', 'nationalite', 'telephone', 'email', 'adresse', 'filiere_id', 'semestre', 'statut', 'boursier', 'observation'];
+            $filtered = array_intersect_key($body, array_flip($allowed));
+            if (isset($filtered['sexe'])) $filtered['sexe'] = in_array($filtered['sexe'], ['M', 'F']) ? $filtered['sexe'] : 'M';
+            if (isset($filtered['semestre'])) $filtered['semestre'] = in_array($filtered['semestre'], ['S1', 'S2', 'S3', 'S4']) ? $filtered['semestre'] : 'S1';
+            if (isset($filtered['filiere_id'])) $filtered['filiere_id'] = (int)$filtered['filiere_id'];
+            if (isset($filtered['boursier'])) $filtered['boursier'] = (int)(bool)$filtered['boursier'];
+            db()->update('etudiants', $filtered, 'id = :id', ['id' => (int)$m[1]]);
             json(['success' => true]);
             break;
 

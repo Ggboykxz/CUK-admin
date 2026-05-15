@@ -45,6 +45,10 @@ if (!function_exists('redirect')) {
     function redirect(string $url): void { header("Location: $url"); exit; }
 }
 
+if (!function_exists('current_page')) {
+    function current_page(): string { return \CUK\Router::currentPage(); }
+}
+
 if (!function_exists('json_response')) {
     function json_response(mixed $data, int $status = 200): void {
         http_response_code($status);
@@ -63,14 +67,30 @@ if (!function_exists('load_env')) {
             $line = trim($line);
             if ($line === '' || str_starts_with($line, '#')) continue;
             if (str_contains($line, '=')) {
-                [$key, $value] = explode('=', $line, 2);
-                $key = trim($key);
+                $pos = strpos($line, '=');
+                $key = trim(substr($line, 0, $pos));
+                $value = trim(substr($line, $pos + 1));
                 $value = trim($value, " \t\n\r\0\x0B\"'");
-                putenv("{$key}={$value}");
                 $_ENV[$key] = $value;
+                $_SERVER[$key] = $value;
+                putenv("{$key}={$value}");
             }
         }
     }
 }
 
 load_env();
+
+spl_autoload_register(function (string $class): void {
+    $map = [
+        'Security' => 'CUK\\Security',
+        'Database' => 'CUK\\Database',
+        'Logger' => 'CUK\\Logger',
+        'Router' => 'CUK\\Router',
+        'View' => 'CUK\\View',
+        'Base32' => 'CUK\\Base32',
+    ];
+    if (isset($map[$class])) {
+        class_alias($map[$class], $class);
+    }
+}, true, false);

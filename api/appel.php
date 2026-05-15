@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../src/bootstrap.php';
 
 use CUK\Security;
 
@@ -55,10 +55,17 @@ if ($action === 'save_appel') {
         if (!$etudiantId) continue;
 
         if (!$present) {
-            $existing = db()->fetch(
-                "SELECT id FROM absences WHERE etudiant_id = ? AND date_absence = ? AND ec_id ?",
-                [$etudiantId, $date, $ecId]
-            );
+            if ($ecId !== null) {
+                $existing = db()->fetch(
+                    "SELECT id FROM absences WHERE etudiant_id = ? AND date_absence = ? AND ec_id = ?",
+                    [$etudiantId, $date, $ecId]
+                );
+            } else {
+                $existing = db()->fetch(
+                    "SELECT id FROM absences WHERE etudiant_id = ? AND date_absence = ? AND ec_id IS NULL",
+                    [$etudiantId, $date]
+                );
+            }
             if (!$existing) {
                 db()->insert('absences', [
                     'etudiant_id' => $etudiantId,

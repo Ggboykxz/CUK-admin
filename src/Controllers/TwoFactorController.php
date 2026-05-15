@@ -32,7 +32,7 @@ class TwoFactorController
         }
 
         if ($this->verifyCode($secret, $code)) {
-            db()->update('users', ['2fa_secret' => $secret, '2fa_actif' => 1], 'id = :id', ['id' => $userId]);
+            db()->update('users', ['twofa_secret' => $secret, 'twofa_actif' => 1], 'id = :id', ['id' => $userId]);
             Security::logActivity('2fa_active', 'Authentification à deux facteurs activée');
             echo json_encode(['success' => true]);
         } else {
@@ -54,7 +54,7 @@ class TwoFactorController
         }
 
         $userId = (int)($_SESSION['user_id'] ?? 0);
-        db()->update('users', ['2fa_secret' => null, '2fa_actif' => 0], 'id = :id', ['id' => $userId]);
+        db()->update('users', ['twofa_secret' => null, 'twofa_actif' => 0], 'id = :id', ['id' => $userId]);
         Security::logActivity('2fa_desactive', 'Authentification à deux facteurs désactivée');
         $_SESSION['success'] = '2FA désactivé';
         header('Location: ?page=parametres');

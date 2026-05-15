@@ -8,6 +8,12 @@ Security::initSession();
 
 $error = '';
 
+if (empty($_SERVER['HTTPS']) && getenv('APP_ENV') === 'production') {
+    $redirect = 'https://' . ($_SERVER['HTTP_HOST'] ?? '') . $_SERVER['REQUEST_URI'];
+    header('Location: ' . $redirect);
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!Security::validateCsrfToken($_POST['_csrf_token'] ?? '')) {
         $error = 'Session expirée, veuillez réessayer';

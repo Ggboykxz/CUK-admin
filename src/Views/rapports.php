@@ -18,7 +18,7 @@ $statsGenerales = [
 
 $repartitionFilieres = db()->fetchAll("SELECT f.nom, COUNT(e.id) as count FROM filieres f LEFT JOIN etudiants e ON f.id = e.filiere_id AND e.annee_academique_id = ? GROUP BY f.id, f.nom", [$anneeCourante['id'] ?? 0]);
 
-$evolutionNotes = db()->fetchAll("SELECT MONTH(n.date_saisie) as mois, AVG(n.moyenne_ec) as moyenne FROM notes n WHERE n.annee_academique_id = ? AND n.moyenne_ec IS NOT NULL GROUP BY mois ORDER BY mois", [$anneeCourante['id'] ?? 0]);
+$evolutionNotes = db()->fetchAll("SELECT CAST(strftime('%m', n.date_saisie) AS INTEGER) as mois, AVG(n.moyenne_ec) as moyenne FROM notes n WHERE n.annee_academique_id = ? AND n.moyenne_ec IS NOT NULL GROUP BY mois ORDER BY mois", [$anneeCourante['id'] ?? 0]);
 ?>
 
 

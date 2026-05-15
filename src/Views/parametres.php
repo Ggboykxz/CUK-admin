@@ -46,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'disable_2fa') {
-        db()->update('users', ['2fa_secret' => null, '2fa_actif' => 0], 'id = :id', ['id' => $_SESSION['user_id']]);
+        db()->update('users', ['twofa_secret' => null, 'twofa_actif' => 0], 'id = :id', ['id' => $_SESSION['user_id']]);
         Security::logActivity('2fa_desactive', '2FA désactivé');
         $_SESSION['success'] = '2FA désactivé';
         header('Location: ?page=parametres');
@@ -230,8 +230,8 @@ foreach ($parametres as $p) {
                 <div class="card-body">
                     <div id="twoFactorSection">
                         <?php
-                        $user2fa = db()->fetch("SELECT 2fa_actif, 2fa_secret FROM users WHERE id = ?", [$_SESSION['user_id'] ?? 0]);
-                        $is2faActive = !empty($user2fa['2fa_actif']);
+$user2fa = db()->fetch('SELECT "twofa_actif", "twofa_secret" FROM users WHERE id = ?', [$_SESSION['user_id'] ?? 0]);
+$is2faActive = !empty($user2fa['twofa_actif']);
                         ?>
                         <div class="row align-items-center">
                             <div class="col-md-8">

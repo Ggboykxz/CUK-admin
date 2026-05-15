@@ -113,7 +113,7 @@ class Router
 
     public static function allowedPages(): array
     {
-        return ['dashboard', 'etudiants', 'notes', 'absences', 'filieres', 'disciplinarite', 'orientations', 'rapports', 'utilisateurs', 'parametres', 'messages', 'cours', 'finances', 'jury', 'portal'];
+        return ['dashboard', 'etudiants', 'notes', 'absences', 'filieres', 'disciplinarite', 'orientations', 'rapports', 'utilisateurs', 'parametres', 'messages', 'cours', 'finances', 'jury', 'portal', 'changer_mot_de_passe'];
     }
 
     public static function requirePage(string $page): void

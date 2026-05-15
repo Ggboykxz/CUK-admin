@@ -1,12 +1,12 @@
 -- Données initiales CUK-Admin SQLite
 -- Centre Universitaire de Koulamoutou
 
--- Utilisateurs
+-- Utilisateurs (mots de passe uniques, changement forcé à la 1ère connexion)
 INSERT INTO users (username, password_hash, role, nom, prenom, email, telephone, actif) VALUES
-('admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'root', 'Administrateur', 'Système', 'admin@cuk-gabon.ga', '+241 01 23 45 67', 1),
-('secretaire', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'secretaire', 'Moubembe', 'Jeanne', 'secretaire@cuk-gabon.ga', '+241 07 11 22 33', 1),
-('prof_ngouala', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'professeur', 'Ngouala', 'Jean-Pierre', 'ngouala@cuk-gabon.ga', '+241 06 44 55 66', 1),
-('prof_mouyama', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'professeur', 'Mouyama', 'Marie', 'mouyama@cuk-gabon.ga', '+241 07 77 88 99', 1);
+('admin', '$2y$10$0OFdcMfCWBHlDqXb3s2RMuw24n58jOd2w.UFsuEbc4xXrKXCAksfm', 'root', 'Administrateur', 'Système', 'admin@cuk-gabon.ga', '+241 01 23 45 67', 1),
+('secretaire', '$2y$10$.MO8mErpsPHBrP2ldKv2Geg2lBWi8t43dtO9VrrvGfX/p1kmzmyuK', 'secretaire', 'Moubembe', 'Jeanne', 'secretaire@cuk-gabon.ga', '+241 07 11 22 33', 1),
+('prof_ngouala', '$2y$10$GFn1nv2jGHu52v9rnGjDfup10Fa3aOeJi8YOONmbmIo7Z0QrdA5d6', 'professeur', 'Ngouala', 'Jean-Pierre', 'ngouala@cuk-gabon.ga', '+241 06 44 55 66', 1),
+('prof_mouyama', '$2y$10$OK.34lxwHbGGNgeVY6wO2uC8lkv241MBNvjjobxpxcKVo0ouNAeJC', 'professeur', 'Mouyama', 'Marie', 'mouyama@cuk-gabon.ga', '+241 07 77 88 99', 1);
 
 -- Années académiques
 INSERT INTO annees_academiques (annee, debut, fin, courante, inscriptions_ouvertes, notes_ouvertes, active) VALUES

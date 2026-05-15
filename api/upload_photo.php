@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../src/bootstrap.php';
 
 use CUK\Security;
 use CUK\Database;
@@ -33,6 +33,16 @@ $maxSize = 2 * 1024 * 1024;
 if ($file['size'] > $maxSize) {
     http_response_code(400);
     echo json_encode(['error' => 'Fichier trop volumineux (max 2 Mo)']);
+    exit;
+}
+
+$finfo = finfo_open(FILEINFO_MIME_TYPE);
+$mime = finfo_file($finfo, $file['tmp_name']);
+finfo_close($finfo);
+$allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+if (!in_array($mime, $allowedMimes, true)) {
+    http_response_code(400);
+    echo json_encode(['error' => 'Type MIME non autorisé']);
     exit;
 }
 

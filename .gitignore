@@ -1,7 +1,5 @@
 # Dependencies
 /vendor/
-composer.json
-composer.lock
 
 # Database
 *.sqlite
@@ -20,6 +18,7 @@ Thumbs.db
 # Logs
 *.log
 logs/
+!runtime/logs/.htaccess
 
 # Environment
 .env

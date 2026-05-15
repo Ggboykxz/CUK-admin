@@ -78,7 +78,11 @@ class Security
         if (empty($_SESSION['_csrf_token']) || empty($token)) {
             return false;
         }
-        return hash_equals($_SESSION['_csrf_token'], $token);
+        $valid = hash_equals($_SESSION['_csrf_token'], $token);
+        if ($valid) {
+            $_SESSION['_csrf_token'] = bin2hex(random_bytes(32));
+        }
+        return $valid;
     }
 
     public static function csrfField(): string
@@ -209,16 +213,42 @@ class Security
         $window['count']++;
         $_SESSION[$key] = $window;
 
-        return $window['count'] <= $maxAttempts;
+        if ($window['count'] > $maxAttempts) {
+            return false;
+        }
+
+        // Database-backed rate limiting as secondary check for IP-based attacks
+        try {
+            $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+            if ($ip) {
+                $attempts = db()->fetch(
+                    "SELECT COUNT(*) as c FROM journal_activite
+                     WHERE action = :action AND ip_address = :ip
+                     AND created_at > datetime('now', :window)",
+                    [
+                        'action' => $key,
+                        'ip' => $ip,
+                        'window' => '-' . $windowSeconds . ' seconds'
+                    ]
+                );
+                if (($attempts['c'] ?? 0) > $maxAttempts) {
+                    return false;
+                }
+            }
+        } catch (\Throwable $e) {
+            // DB unavailable - session check is sufficient fallback
+        }
+
+        return true;
     }
 
     public static function accountLockout(string $username): bool
     {
         $lockouts = db()->fetch(
             "SELECT COUNT(*) as count FROM journal_activite
-             WHERE action = 'connexion_echouee' AND details LIKE :username
+             WHERE action = 'connexion_echouee' AND details = :username
              AND created_at > datetime('now', '-15 minutes')",
-            ['username' => "%{$username}%"]
+            ['username' => $username]
         );
 
         return ($lockouts['count'] ?? 0) >= 10;

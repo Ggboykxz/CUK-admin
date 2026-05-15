@@ -121,15 +121,16 @@ return [
 ];
 ```
 
-### Comptes par défaut
+### Comptes par défaut (développement uniquement)
 
 | Utilisateur | Mot de passe | Rôle | Description |
 |-------------|--------------|------|-------------|
-| `admin` | `password` | root | Administrateur système |
-| `secretaire` | `password` | secretaire | Gestionnaire inscriptions |
-| `prof_ngouala` | `password` | professeur | Enseignant |
+| `admin` | `CUK2025_Admin!` | root | Administrateur système |
+| `secretaire` | `CUK2025_Secretaire!` | secretaire | Gestionnaire inscriptions |
+| `prof_ngouala` | `CUK2025_Prof1!` | professeur | Enseignant |
+| `prof_mouyama` | `CUK2025_Prof2!` | professeur | Enseignant |
 
-> ⚠️ **Important**: Changez les mots de passe après la première connexion!
+> ⚠️ **Important**: Changez les mots de passe après la première connexion ! Le système forcera le changement pour tout compte utilisant encore un mot de passe par défaut.
 
 ---
 

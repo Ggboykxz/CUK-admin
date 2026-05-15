@@ -2,9 +2,12 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/src/Security.php';
-require_once __DIR__ . '/src/Database.php';
-require_once __DIR__ . '/src/helpers.php';
+ob_start();
+
+require_once __DIR__ . '/src/bootstrap.php';
+
+use CUK\Security;
+use CUK\Database;
 
 Security::initSession();
 
@@ -35,7 +38,7 @@ if (getenv('MAINTENANCE_MODE') === 'true' && !isset($_GET['maintenance'])) {
 
 // Error handler
 set_exception_handler(function (\Throwable $e) {
-    Logger::error($e->getMessage(), ['file' => $e->getFile(), 'line' => $e->getLine()]);
+    \CUK\Logger::error($e->getMessage(), ['file' => $e->getFile(), 'line' => $e->getLine()]);
     if (getenv('APP_ENV') === 'production') {
         http_response_code(500);
         include __DIR__ . '/src/Views/errors/500.php';
@@ -45,7 +48,7 @@ set_exception_handler(function (\Throwable $e) {
 });
 set_error_handler(function ($severity, $message, $file, $line) {
     if (error_reporting() & $severity) {
-        Logger::warning($message, ['file' => $file, 'line' => $line]);
+        \CUK\Logger::warning($message, ['file' => $file, 'line' => $line]);
     }
 });
 ?>

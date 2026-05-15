@@ -96,11 +96,12 @@ try {
     echo "\n====================================================\n";
     echo "  Installation terminée avec succès!\n";
     echo "====================================================\n\n";
-    echo "Comptes par défaut:\n";
-    echo "  - admin (root)\n";
-    echo "  - secretaire (secrétaire)\n";
-    echo "  - prof_ngouala (professeur)\n\n";
-    echo "IMPORTANT: Changez les mots de passe par défaut après la première connexion.\n\n";
+    echo "Comptes par défaut (développement uniquement):\n";
+    echo "  - admin / CUK2025_Admin! (root)\n";
+    echo "  - secretaire / CUK2025_Secretaire! (secrétaire)\n";
+    echo "  - prof_ngouala / CUK2025_Prof1! (professeur)\n";
+    echo "  - prof_mouyama / CUK2025_Prof2! (professeur)\n\n";
+    echo "IMPORTANT: Le système forcera le changement de mot de passe après la première connexion.\n\n";
     echo "Pour lancer l'application:\n";
     echo "  php -S localhost:8000\n";
     echo "  puis ouvrir http://localhost:8000\n\n";

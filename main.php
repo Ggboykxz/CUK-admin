@@ -2,18 +2,12 @@
 
 declare(strict_types=1);
 
-if (php_sapi_name() === 'cli' || !isset($_SERVER['REQUEST_METHOD'])) {
-    echo "CUK-Admin - Centre Universitaire de Koulamoutou\n";
-    echo "==============================================\n\n";
-    echo "Pour lancer l'application, utilisez un serveur PHP:\n";
-    echo "  php -S localhost:8000\n";
-    echo "  php -S localhost:8080\n\n";
-    exit;
-}
+ob_start();
 
-require_once __DIR__ . '/src/Security.php';
-require_once __DIR__ . '/src/Database.php';
-require_once __DIR__ . '/src/helpers.php';
+require_once __DIR__ . '/src/bootstrap.php';
+
+use CUK\Security;
+use CUK\Database;
 
 Security::initSession();
 
@@ -47,10 +41,17 @@ if (getenv('MAINTENANCE_MODE') === 'true' && !isset($_GET['maintenance'])) {
 }
 
 set_exception_handler(function (\Throwable $e) {
-    \CUK\Logger::error($e->getMessage(), ['file' => $e->getFile(), 'line' => $e->getLine()]);
+    if (class_exists('\\CUK\\Logger')) {
+        \CUK\Logger::error($e->getMessage(), ['file' => $e->getFile(), 'line' => $e->getLine()]);
+    }
     if (getenv('APP_ENV') === 'production') {
         http_response_code(500);
-        include __DIR__ . '/src/Views/errors/500.php';
+        $errorFile = __DIR__ . '/src/Views/errors/500.php';
+        if (file_exists($errorFile)) {
+            include $errorFile;
+        } else {
+            echo '<h1>Erreur interne du serveur</h1>';
+        }
         exit;
     }
     throw $e;
@@ -98,17 +99,7 @@ set_exception_handler(function (\Throwable $e) {
                 <div class="content-area" id="mainContent">
                     <?php
                     $page = $_GET['page'] ?? 'dashboard';
-                    $allowedPages = ['dashboard', 'etudiants', 'notes', 'absences', 'filieres', 'disciplinarite', 'orientations', 'rapports', 'utilisateurs', 'parametres', 'messages', 'cours', 'finances', 'jury', 'portal', 'changer_mot_de_passe'];
-                    if (in_array($page, $allowedPages, true)) {
-                        $viewFile = __DIR__ . '/src/Views/' . $page . '.php';
-                        if (file_exists($viewFile)) {
-                            Security::showSuccess();
-                            Security::showError();
-                            include $viewFile;
-                        }
-                    } else {
-                        include __DIR__ . '/src/Views/dashboard.php';
-                    }
+                    \CUK\Router::requirePage($page);
                     ?>
                 </div>
             </main>
