@@ -208,16 +208,16 @@ $statsIncidents = [
                         </td>
                         <td>
                             <div class="btn-group btn-group-sm">
-                                <button class="btn btn-outline-primary" onclick="viewIncident(<?= $i['id'] ?>)">
+                                <button class="btn btn-outline-primary" data-id="<?= $i['id'] ?>">
                                     <i class="bi bi-eye"></i>
                                 </button>
                                 <?php if ($i['statut'] !== 'traite') : ?>
-                                <button class="btn btn-outline-success" onclick="traiterIncident(<?= $i['id'] ?>)">
+                                <button class="btn btn-outline-success" data-id="<?= $i['id'] ?>">
                                     <i class="bi bi-check-lg"></i>
                                 </button>
                                 <?php endif; ?>
                                 <?php if ($i['statut'] === 'traite') : ?>
-                                <button class="btn btn-outline-secondary" onclick="cloturerIncident(<?= $i['id'] ?>)">
+                                <button class="btn btn-outline-secondary" data-id="<?= $i['id'] ?>">
                                     <i class="bi bi-check-all"></i>
                                 </button>
                                 <?php endif; ?>
@@ -352,5 +352,23 @@ document.addEventListener('DOMContentLoaded', function() {
     if (window.location.hash === '#incidents') {
         new bootstrap.Tab(document.querySelector('[data-bs-target="#incidents"]')).show();
     }
+
+    document.querySelectorAll('button.btn-outline-primary[data-id]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            viewIncident(this.dataset.id);
+        });
+    });
+
+    document.querySelectorAll('button.btn-outline-success[data-id]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            traiterIncident(this.dataset.id);
+        });
+    });
+
+    document.querySelectorAll('button.btn-outline-secondary[data-id]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            cloturerIncident(this.dataset.id);
+        });
+    });
 });
 </script>

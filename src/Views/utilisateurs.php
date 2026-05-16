@@ -167,11 +167,11 @@ $journal = db()->fetchAll("SELECT j.*, u.username FROM journal_activite j LEFT J
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
-                                        <button class="btn btn-outline-primary" onclick="editUser(<?= $u['id'] ?>)">
+                                        <button class="btn btn-outline-primary btn-edit-user" data-id="<?= $u['id'] ?>">
                                             <i class="bi bi-pencil"></i>
                                         </button>
                                         <?php if ($u['id'] != $_SESSION['user_id']) : ?>
-                                        <button class="btn btn-outline-danger" onclick="deleteUser(<?= $u['id'] ?>)">
+                                        <button class="btn btn-outline-danger btn-delete-user" data-id="<?= $u['id'] ?>">
                                             <i class="bi bi-trash"></i>
                                         </button>
                                         <?php endif; ?>
@@ -315,4 +315,13 @@ function deleteUser(id) {
         document.getElementById('deleteForm').submit();
     }
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.btn-edit-user').forEach(function(btn) {
+        btn.addEventListener('click', function() { editUser(btn.dataset.id); });
+    });
+    document.querySelectorAll('.btn-delete-user').forEach(function(btn) {
+        btn.addEventListener('click', function() { deleteUser(btn.dataset.id); });
+    });
+});
 </script>

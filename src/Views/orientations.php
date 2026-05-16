@@ -180,7 +180,7 @@ $orientations = db()->fetchAll("SELECT o.*, e.numero, e.nom, e.prenom, fo.nom as
                         </td>
                         <td>
                             <?php if ($o['decision'] === 'en_attente') : ?>
-                            <button class="btn btn-sm btn-outline-success" onclick="deciderOrientation(<?= $o['id'] ?>)">
+                            <button class="btn btn-sm btn-outline-success btn-decider-orientation" data-id="<?= $o['id'] ?>">
                                 <i class="bi bi-check"></i> Décider
                             </button>
                             <?php endif; ?>
@@ -236,4 +236,10 @@ function deciderOrientation(id) {
     document.getElementById('deciderId').value = id;
     new bootstrap.Modal(document.getElementById('deciderModal')).show();
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.btn-decider-orientation').forEach(function(btn) {
+        btn.addEventListener('click', function() { deciderOrientation(btn.dataset.id); });
+    });
+});
 </script>

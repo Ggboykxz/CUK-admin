@@ -250,7 +250,7 @@ $etudiants = db()->fetchAll("SELECT e.id, e.numero, e.nom, e.prenom, f.nom as fi
                     </select>
                 </div>
                 <div class="col-md-2 d-flex align-items-end">
-                    <button type="button" class="btn btn-primary w-100" onclick="loadEC()" id="btnLoadEC">
+                    <button type="button" class="btn btn-primary w-100" id="btnLoadEC">
                         <i class="bi bi-search"></i> Charger
                     </button>
                 </div>
@@ -262,13 +262,13 @@ $etudiants = db()->fetchAll("SELECT e.id, e.numero, e.nom, e.prenom, f.nom as fi
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5><i class="bi bi-pencil-square"></i> Saisie des Notes</h5>
             <div class="d-flex gap-2">
-                <button type="button" class="btn btn-outline-info btn-sm" onclick="calculerSemestre()">
+                <button type="button" class="btn btn-outline-info btn-sm" id="btnCalculerSemestre">
                     <i class="bi bi-calculator"></i> Calculer Semestre
                 </button>
-                <button type="button" class="btn btn-outline-success btn-sm" onclick="sauvegarderMoyenne()" id="btnSaveMoyenne" style="display:none;">
+                <button type="button" class="btn btn-outline-success btn-sm" id="btnSaveMoyenne" style="display:none;">
                     <i class="bi bi-save"></i> Sauvegarder moyenne
                 </button>
-                <button type="button" class="btn btn-outline-primary btn-sm" onclick="ouvrirSaisieGroupee()">
+                <button type="button" class="btn btn-outline-primary btn-sm" id="btnSaisieGroupee">
                     <i class="bi bi-table"></i> Saisie groupée
                 </button>
             </div>
@@ -314,7 +314,7 @@ $etudiants = db()->fetchAll("SELECT e.id, e.numero, e.nom, e.prenom, f.nom as fi
                         <input type="number" class="form-control" id="noteExamen" min="0" max="20" step="0.25" placeholder="0-20">
                     </div>
                     <div class="col-md-3 d-flex align-items-end">
-                        <button type="button" class="btn btn-primary w-100" onclick="saveNote()">
+                        <button type="button" class="btn btn-primary w-100" id="btnSaveNote">
                             <i class="bi bi-save"></i> Enregistrer
                         </button>
                     </div>
@@ -369,12 +369,20 @@ $etudiants = db()->fetchAll("SELECT e.id, e.numero, e.nom, e.prenom, f.nom as fi
 <script <?= nonce_attr() ?>>
 const ecsCache = {};
 
-document.getElementById('etudiantSelect').addEventListener('change', function() {
-    document.getElementById('ecSelect').disabled = this.value === '';
-    const option = this.options[this.selectedIndex];
-    if (option.dataset.semestre) {
-        document.getElementById('semestreSelect').value = option.dataset.semestre;
-    }
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('etudiantSelect').addEventListener('change', function() {
+        document.getElementById('ecSelect').disabled = this.value === '';
+        const option = this.options[this.selectedIndex];
+        if (option.dataset.semestre) {
+            document.getElementById('semestreSelect').value = option.dataset.semestre;
+        }
+    });
+
+    document.getElementById('btnLoadEC').addEventListener('click', loadEC);
+    document.getElementById('btnCalculerSemestre')?.addEventListener('click', calculerSemestre);
+    document.getElementById('btnSaveMoyenne')?.addEventListener('click', sauvegarderMoyenne);
+    document.getElementById('btnSaisieGroupee')?.addEventListener('click', ouvrirSaisieGroupee);
+    document.getElementById('btnSaveNote').addEventListener('click', saveNote);
 });
 
 function loadEC() {
@@ -559,13 +567,14 @@ function ouvrirSaisieGroupee() {
             });
             html += '</tbody></table></div>' +
                 '<div class="text-end mt-3">' +
-                '<button class="btn btn-primary" onclick="sauvegarderBulk()"><i class="bi bi-save"></i> Tout enregistrer</button>' +
+                '<button class="btn btn-primary" id="btnBulkSave"><i class="bi bi-save"></i> Tout enregistrer</button>' +
                 '</div>';
 
             var modal = document.getElementById('modal');
             modal.querySelector('.modal-title').textContent = 'Saisie groupée des notes';
             modal.querySelector('.modal-body').innerHTML = html;
             modal.querySelector('.modal-footer').innerHTML = '';
+            modal.querySelector('.modal-body').querySelector('#btnBulkSave').addEventListener('click', sauvegarderBulk);
             new bootstrap.Modal(modal).show();
         });
 }

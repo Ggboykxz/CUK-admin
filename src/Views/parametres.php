@@ -209,7 +209,7 @@ foreach ($parametres as $p) {
                                 <i class="bi bi-download" style="font-size:40px;color:var(--primary);"></i>
                                 <h6 class="mt-2">Créer une sauvegarde</h6>
                                 <p class="text-muted small">Copie complète de la base de données</p>
-                                <button class="btn btn-primary" onclick="creerBackup()"><i class="bi bi-download"></i> Sauvegarder</button>
+                                <button class="btn btn-primary" id="btnCreerBackup"><i class="bi bi-download"></i> Sauvegarder</button>
                                 <div id="backupResult" class="mt-2"></div>
                             </div>
                         </div>
@@ -250,7 +250,7 @@ $is2faActive = !empty($user2fa['twofa_actif']);
                                     <button class="btn btn-outline-danger btn-sm" name="action" value="disable_2fa"><i class="bi bi-x-circle"></i> Désactiver</button>
                                 </form>
                                 <?php else: ?>
-                                <button class="btn btn-primary btn-sm" onclick="setup2FA()"><i class="bi bi-shield"></i> Activer</button>
+                                <button class="btn btn-primary btn-sm" id="btnSetup2FA"><i class="bi bi-shield"></i> Activer</button>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -271,7 +271,7 @@ $is2faActive = !empty($user2fa['twofa_actif']);
                                     <p class="text-muted small">Entrez le code à 6 chiffres généré par votre application</p>
                                     <div class="input-group mb-3" style="max-width:200px;">
                                         <input type="text" class="form-control text-center" id="code2FA" maxlength="6" placeholder="000000">
-                                        <button class="btn btn-success" onclick="verifier2FA()">Vérifier</button>
+                                        <button class="btn btn-success" id="btnVerifier2FA">Vérifier</button>
                                     </div>
                                     <div id="twoFAResult"></div>
                                 </div>
@@ -301,8 +301,8 @@ function chargerBackups() {
                 html += '<div class="list-group-item d-flex justify-content-between align-items-center py-2 px-0">' +
                     '<div><small><strong>' + b.file + '</strong></small><br><small class="text-muted">' + b.date + ' - ' + b.size_formatted + '</small></div>' +
                     '<div class="btn-group btn-group-sm">' +
-                    '<button class="btn btn-outline-success" onclick="restaurerBackup(\'' + b.file + '\')"><i class="bi bi-upload"></i></button>' +
-                    '<button class="btn btn-outline-danger" onclick="supprimerBackup(\'' + b.file + '\')"><i class="bi bi-trash"></i></button>' +
+                    '<button class="btn btn-outline-success" data-file="' + b.file + '" data-action="restore"><i class="bi bi-upload"></i></button>' +
+                    '<button class="btn btn-outline-danger" data-file="' + b.file + '" data-action="delete"><i class="bi bi-trash"></i></button>' +
                     '</div></div>';
             });
             html += '</div>';
@@ -310,8 +310,8 @@ function chargerBackups() {
         });
 }
 
-function creerBackup() {
-    var btn = event.target;
+function creerBackup(e) {
+    var btn = e.target;
     btn.disabled = true;
     btn.innerHTML = '<i class="bi bi-hourglass"></i> Création...';
     document.getElementById('backupResult').innerHTML = '';
@@ -351,7 +351,24 @@ function supprimerBackup(file) {
         .then(function() { chargerBackups(); });
 }
 
-chargerBackups();
+document.addEventListener('DOMContentLoaded', function() {
+    chargerBackups();
+
+    document.getElementById('btnCreerBackup').addEventListener('click', function(e) {
+        creerBackup(e);
+    });
+    document.getElementById('btnSetup2FA').addEventListener('click', setup2FA);
+    document.getElementById('btnVerifier2FA').addEventListener('click', verifier2FA);
+
+    document.getElementById('backupList').addEventListener('click', function(e) {
+        var btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        var file = btn.getAttribute('data-file');
+        var action = btn.getAttribute('data-action');
+        if (action === 'restore') restaurerBackup(file);
+        if (action === 'delete') supprimerBackup(file);
+    });
+});
 
 // === 2FA ===
 var currentSecret = '';

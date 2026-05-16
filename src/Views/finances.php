@@ -131,7 +131,7 @@ $frais = db()->fetchAll(
                             </span>
                         </td>
                         <td>
-                            <button class="btn btn-sm btn-success" onclick="payer(<?= $f['id'] ?>, <?= (float)$f['montant_total'] ?>, <?= (float)$f['montant_paye'] ?>)"><i class="bi bi-cash"></i> Payer</button>
+                            <button class="btn btn-sm btn-success btn-payer-frais" data-id="<?= $f['id'] ?>" data-total="<?= (float)$f['montant_total'] ?>" data-paye="<?= (float)$f['montant_paye'] ?>"><i class="bi bi-cash"></i> Payer</button>
                         </td>
                     </tr>
                     <?php endforeach; ?>
@@ -195,4 +195,10 @@ function payer(id, total, paye) {
     document.getElementById('payerMontant').max = total;
     new bootstrap.Modal(document.getElementById('payerModal')).show();
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.btn-payer-frais').forEach(function(btn) {
+        btn.addEventListener('click', function() { payer(btn.dataset.id, btn.dataset.total, btn.dataset.paye); });
+    });
+});
 </script>

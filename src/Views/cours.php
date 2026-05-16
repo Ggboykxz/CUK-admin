@@ -63,7 +63,7 @@ foreach ($cours as $c) {
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h4 class="mb-0"><i class="bi bi-calendar-week"></i> Emploi du temps</h4>
         <?php if (in_array($_SESSION['user_role'] ?? '', ['root', 'administrateur'], true)): ?>
-        <button class="btn btn-primary" onclick="new bootstrap.Modal(document.getElementById('coursModal')).show()"><i class="bi bi-plus-circle"></i> Ajouter un cours</button>
+        <button class="btn btn-primary" id="btnAjouterCours"><i class="bi bi-plus-circle"></i> Ajouter un cours</button>
         <?php endif; ?>
     </div>
 
@@ -89,7 +89,7 @@ foreach ($cours as $c) {
                             if ($hd >= $h && $hd < $h + 2):
                             $found = true;
                         ?>
-                        <div class="p-1 mb-1 rounded bg-<?= $c['type_seance'] === 'TP' ? 'info' : ($c['type_seance'] === 'TD' ? 'warning' : 'primary') ?> text-white" style="font-size:11px;cursor:pointer;" onclick="viewCours(<?= $c['id'] ?>, '<?= Security::h($c['ec_code'] ?? '') ?>', '<?= Security::h($c['ec_nom'] ?? '') ?>', '<?= Security::h(($c['ens_prenom'] ?? '') . ' ' . ($c['ens_nom'] ?? '')) ?>', '<?= Security::h($c['salle_nom'] ?? $c['salle'] ?? '') ?>', '<?= $c['heure_debut'] ?>', '<?= $c['heure_fin'] ?>', '<?= $c['type_seance'] ?>')">
+                        <div class="p-1 mb-1 rounded bg-<?= $c['type_seance'] === 'TP' ? 'info' : ($c['type_seance'] === 'TD' ? 'warning' : 'primary') ?> text-white" style="font-size:11px;cursor:pointer;" data-id="<?= $c['id'] ?>" data-code="<?= Security::h($c['ec_code'] ?? '') ?>" data-nom="<?= Security::h($c['ec_nom'] ?? '') ?>" data-ens="<?= Security::h(($c['ens_prenom'] ?? '') . ' ' . ($c['ens_nom'] ?? '')) ?>" data-salle="<?= Security::h($c['salle_nom'] ?? $c['salle'] ?? '') ?>" data-debut="<?= $c['heure_debut'] ?>" data-fin="<?= $c['heure_fin'] ?>" data-type="<?= $c['type_seance'] ?>">
                             <strong><?= Security::h($c['ec_code'] ?? '') ?></strong><br>
                             <small><?= Security::h($c['salle_nom'] ?? $c['salle'] ?? '') ?></small>
                         </div>
@@ -202,4 +202,28 @@ function viewCours(id, code, nom, enseignant, salle, debut, fin, type) {
     document.getElementById('viewCoursBody').innerHTML = '<table class="table table-sm"><tr><th>Enseignant:</th><td>' + enseignant + '</td></tr><tr><th>Salle:</th><td>' + salle + '</td></tr><tr><th>Horaire:</th><td>' + debut + ' - ' + fin + '</td></tr><tr><th>Type:</th><td>' + type + '</td></tr></table>';
     new bootstrap.Modal(document.getElementById('viewCoursModal')).show();
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    const btn = document.getElementById('btnAjouterCours');
+    if (btn) {
+        btn.addEventListener('click', function() {
+            new bootstrap.Modal(document.getElementById('coursModal')).show();
+        });
+    }
+
+    document.querySelectorAll('[data-id][data-code]').forEach(function(el) {
+        el.addEventListener('click', function() {
+            viewCours(
+                this.dataset.id,
+                this.dataset.code,
+                this.dataset.nom,
+                this.dataset.ens,
+                this.dataset.salle,
+                this.dataset.debut,
+                this.dataset.fin,
+                this.dataset.type
+            );
+        });
+    });
+});
 </script>

@@ -85,7 +85,7 @@
             </div>
         </div>
         <div class="d-flex gap-1">
-            <button id="themeToggle" class="logout-btn" onclick="toggleTheme()" title="Mode sombre" style="font-size:16px;">
+            <button id="themeToggle" class="logout-btn" title="Mode sombre" style="font-size:16px;">
                 <i class="bi bi-moon-fill"></i>
             </button>
             <a href="?logout=1" class="logout-btn" title="Déconnexion">
@@ -94,3 +94,12 @@
         </div>
     </div>
 </aside>
+
+<script <?= nonce_attr() ?>>
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('themeToggle').addEventListener('click', function(e) {
+        e.preventDefault();
+        toggleTheme();
+    });
+});
+</script>

@@ -186,11 +186,11 @@ $statsAbsences = [
                         <td>
                             <div class="btn-group btn-group-sm">
                                 <?php if (!$a['justifiee']) : ?>
-                                <button class="btn btn-outline-success" onclick="justifierAbsence(<?= $a['id'] ?>)" title="Justifier">
+                                <button class="btn btn-outline-success btn-justifier-absence" data-id="<?= $a['id'] ?>" title="Justifier">
                                     <i class="bi bi-check-lg"></i>
                                 </button>
                                 <?php endif; ?>
-                                <button class="btn btn-outline-danger" onclick="supprimerAbsence(<?= $a['id'] ?>)" title="Supprimer">
+                                <button class="btn btn-outline-danger btn-supprimer-absence" data-id="<?= $a['id'] ?>" title="Supprimer">
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </div>
@@ -232,7 +232,7 @@ $statsAbsences = [
                             <input type="date" class="form-control" id="appelDate" value="<?= date('Y-m-d') ?>">
                         </div>
                         <div class="col-md-3 d-flex align-items-end">
-                            <button class="btn btn-primary" onclick="chargerAppel()">
+                            <button class="btn btn-primary" id="btnChargerAppel">
                                 <i class="bi bi-search"></i> Charger
                             </button>
                         </div>
@@ -254,12 +254,12 @@ $statsAbsences = [
                         <div class="row mt-3">
                             <div class="col-md-6">
                                 <div class="d-flex gap-2">
-                                    <button class="btn btn-success" onclick="toutPresence(true)"><i class="bi bi-check-all"></i> Tous présents</button>
-                                    <button class="btn btn-danger" onclick="toutPresence(false)"><i class="bi bi-x"></i> Tous absents</button>
+                                    <button class="btn btn-success" id="btnTousPresents"><i class="bi bi-check-all"></i> Tous présents</button>
+                                    <button class="btn btn-danger" id="btnTousAbsents"><i class="bi bi-x"></i> Tous absents</button>
                                 </div>
                             </div>
                             <div class="col-md-6 text-end">
-                                <button class="btn btn-primary" onclick="sauvegarderAppel()">
+                                <button class="btn btn-primary" id="btnSauvegarderAppel">
                                     <i class="bi bi-save"></i> Enregistrer l'appel
                                 </button>
                             </div>
@@ -310,6 +310,17 @@ document.addEventListener('DOMContentLoaded', function() {
         pageLength: 25,
         order: [[0, 'desc']]
     });
+
+    document.querySelectorAll('.btn-justifier-absence').forEach(function(btn) {
+        btn.addEventListener('click', function() { justifierAbsence(this.dataset.id); });
+    });
+    document.querySelectorAll('.btn-supprimer-absence').forEach(function(btn) {
+        btn.addEventListener('click', function() { supprimerAbsence(this.dataset.id); });
+    });
+    document.getElementById('btnChargerAppel').addEventListener('click', chargerAppel);
+    document.getElementById('btnTousPresents').addEventListener('click', function() { toutPresence(true); });
+    document.getElementById('btnTousAbsents').addEventListener('click', function() { toutPresence(false); });
+    document.getElementById('btnSauvegarderAppel').addEventListener('click', sauvegarderAppel);
 });
 
 function justifierAbsence(id) {

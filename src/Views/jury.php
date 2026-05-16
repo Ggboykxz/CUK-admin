@@ -90,7 +90,7 @@ function genererResultats(int $anneeId, int $filiereId, string $semestre): void
 <div class="jury-page">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h4 class="mb-0"><i class="bi bi-file-earmark-text"></i> Délibération / Jury</h4>
-        <button class="btn btn-primary" onclick="new bootstrap.Modal(document.getElementById('juryModal')).show()">
+        <button class="btn btn-primary" id="btnAjouterJury">
             <i class="bi bi-plus-circle"></i> Nouveau PV
         </button>
     </div>
@@ -184,3 +184,11 @@ function genererResultats(int $anneeId, int $filiereId, string $semestre): void
         </div>
     </div>
 </div>
+
+<script <?= nonce_attr() ?>>
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('btnAjouterJury').addEventListener('click', function() {
+        new bootstrap.Modal(document.getElementById('juryModal')).show();
+    });
+});
+</script>

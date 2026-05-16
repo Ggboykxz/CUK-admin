@@ -42,13 +42,13 @@ $evolutionNotes = db()->fetchAll("SELECT CAST(strftime('%m', n.date_saisie) AS I
                     </select>
                 </div>
                 <div class="col-md-4 d-flex align-items-end">
-                    <button type="button" class="btn btn-primary" onclick="genererRapport()">
+                    <button type="button" class="btn btn-primary" id="btnGenererRapport">
                         <i class="bi bi-file-earmark-bar-graph"></i> Générer
                     </button>
-                    <button type="button" class="btn btn-success ms-2" onclick="exportPDF()">
+                    <button type="button" class="btn btn-success ms-2" id="btnExportPDF">
                         <i class="bi bi-file-pdf"></i> PDF
                     </button>
-                    <button type="button" class="btn btn-info ms-2" onclick="exportExcel()">
+                    <button type="button" class="btn btn-info ms-2" id="btnExportExcel">
                         <i class="bi bi-file-excel"></i> Excel
                     </button>
                 </div>
@@ -148,6 +148,10 @@ document.addEventListener('DOMContentLoaded', function() {
             scales: { y: { beginAtZero: true, max: 20 } }
         }
     });
+
+    document.getElementById('btnGenererRapport').addEventListener('click', genererRapport);
+    document.getElementById('btnExportPDF').addEventListener('click', exportPDF);
+    document.getElementById('btnExportExcel').addEventListener('click', exportExcel);
 });
 
 function genererRapport() {

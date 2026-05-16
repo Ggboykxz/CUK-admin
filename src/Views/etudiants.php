@@ -144,7 +144,7 @@ $etudiants = db()->fetchAll("SELECT e.*, f.nom as filiere, f.code as filiere_cod
             </select>
         </div>
         <?php if (($_SESSION['user_role'] ?? '') !== 'professeur') : ?>
-        <button class="btn btn-primary" onclick="openModal('etudiant', 'create')">
+        <button class="btn btn-primary" id="btnNouvelEtudiant">
             <i class="bi bi-plus-circle"></i> Nouvel Étudiant
         </button>
         <?php endif; ?>
@@ -193,14 +193,14 @@ $etudiants = db()->fetchAll("SELECT e.*, f.nom as filiere, f.code as filiere_cod
                         </td>
                         <td>
                             <div class="btn-group btn-group-sm">
-                                <button class="btn btn-outline-primary" onclick="viewEtudiant(<?= $e['id'] ?>)" title="Voir">
+                                <button class="btn btn-outline-primary btn-view-student" data-id="<?= $e['id'] ?>" title="Voir">
                                     <i class="bi bi-eye"></i>
                                 </button>
                                 <?php if (($_SESSION['user_role'] ?? '') !== 'professeur') : ?>
-                                <button class="btn btn-outline-secondary" onclick="openModal('etudiant', 'edit', <?= $e['id'] ?>)" title="Modifier">
+                                <button class="btn btn-outline-secondary btn-edit-student" data-id="<?= $e['id'] ?>" title="Modifier">
                                     <i class="bi bi-pencil"></i>
                                 </button>
-                                <button class="btn btn-outline-danger" onclick="confirmDelete(<?= $e['id'] ?>)" title="Supprimer">
+                                <button class="btn btn-outline-danger btn-delete-student" data-id="<?= $e['id'] ?>" title="Supprimer">
                                     <i class="bi bi-trash"></i>
                                 </button>
                                 <?php endif; ?>
@@ -388,6 +388,28 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     });
+
+    document.getElementById('btnNouvelEtudiant')?.addEventListener('click', function() {
+        openModal('etudiant', 'create');
+    });
+
+    document.querySelectorAll('.btn-view-student').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            viewEtudiant(this.dataset.id);
+        });
+    });
+
+    document.querySelectorAll('.btn-edit-student').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            openModal('etudiant', 'edit', this.dataset.id);
+        });
+    });
+
+    document.querySelectorAll('.btn-delete-student').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            confirmDelete(this.dataset.id);
+        });
+    });
 });
 
 function openModal(type, action, id = null) {
@@ -477,8 +499,8 @@ function viewProfile(id) {
                 '<div class="student-avatar" style="width:100px;height:100px;font-size:36px;margin:0 auto 16px;">' + esc(data.prenom ? data.prenom[0] : '') + esc(data.nom ? data.nom[0] : '') + '</div>' +
                 '<h5>' + esc(data.prenom) + ' ' + esc(data.nom) + '</h5>' +
                 '<p class="text-muted">' + esc(data.numero) + '</p>' +
-                '<button class="btn btn-sm btn-outline-primary mb-2" onclick="document.getElementById(\'photoUpload\').click()"><i class="bi bi-camera"></i> Photo</button>' +
-                '<input type="file" id="photoUpload" accept="image/*" style="display:none" onchange="uploadPhoto(' + id + ', this)">' +
+                '<button class="btn btn-sm btn-outline-primary mb-2" id="btnPhotoUpload"><i class="bi bi-camera"></i> Photo</button>' +
+                '<input type="file" id="photoUpload" accept="image/*" style="display:none">' +
                 '</div>' +
                 '<div class="col-md-8"><table class="table table-sm">' +
                 '<tr><th>Institut:</th><td>' + esc(data.institut) + ' - ' + esc(data.institut_nom) + '</td></tr>' +
@@ -498,6 +520,14 @@ function viewProfile(id) {
                 '</div></div>';
 
             document.getElementById('viewContent').innerHTML = html;
+
+            document.getElementById('btnPhotoUpload').addEventListener('click', function() {
+                document.getElementById('photoUpload').click();
+            });
+            document.getElementById('photoUpload').addEventListener('change', function() {
+                uploadPhoto(id, this);
+            });
+
             new bootstrap.Modal(document.getElementById('viewModal')).show();
         });
 }

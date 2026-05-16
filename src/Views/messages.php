@@ -59,7 +59,7 @@ if ($action === 'inbox') {
             <a href="?page=messages&action=inbox" class="btn <?= $action === 'inbox' ? 'btn-primary' : 'btn-outline-primary' ?>"><i class="bi bi-inbox"></i> Réception</a>
             <a href="?page=messages&action=sent" class="btn <?= $action === 'sent' ? 'btn-primary' : 'btn-outline-primary' ?>"><i class="bi bi-send"></i> Envoyés</a>
         </div>
-        <button class="btn btn-success" onclick="showCompose()"><i class="bi bi-pencil"></i> Nouveau message</button>
+        <button class="btn btn-success" id="btnShowCompose"><i class="bi bi-pencil"></i> Nouveau message</button>
     </div>
 
     <div class="card">
@@ -71,7 +71,7 @@ if ($action === 'inbox') {
                         <?php foreach ($messages as $m): ?>
                         <tr class="<?= $action === 'inbox' && !$m['read_at'] ? 'fw-bold' : '' ?>">
                             <td>
-                                <a href="#" onclick="viewMessage(<?= $m['id'] ?>, `<?= Security::h($m['subject'] ?? '') ?>`, `<?= Security::h($m['body'] ?? '') ?>`, '<?= Security::h(($m['sender_prenom'] ?? $m['recipient_prenom'] ?? '') . ' ' . ($m['sender_nom'] ?? $m['recipient_nom'] ?? '')) ?>')"><?= Security::h($m['subject'] ?? '(Sans sujet)') ?></a>
+                                <a href="#" data-id="<?= $m['id'] ?>" data-subject="<?= Security::h($m['subject'] ?? '') ?>" data-body="<?= Security::h($m['body'] ?? '') ?>" data-sender="<?= Security::h(($m['sender_prenom'] ?? $m['recipient_prenom'] ?? '') . ' ' . ($m['sender_nom'] ?? $m['recipient_nom'] ?? '')) ?>"><?= Security::h($m['subject'] ?? '(Sans sujet)') ?></a>
                             </td>
                             <td><?= Security::h(($m['sender_prenom'] ?? $m['recipient_prenom'] ?? '') . ' ' . ($m['sender_nom'] ?? $m['recipient_nom'] ?? '')) ?></td>
                             <td><small><?= date('d/m/Y H:i', strtotime($m['created_at'])) ?></small></td>
@@ -85,7 +85,7 @@ if ($action === 'inbox') {
                                     <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-check"></i></button>
                                 </form>
                                 <?php endif; ?>
-                                <button class="btn btn-sm btn-outline-primary" onclick="repondre(<?= $m['id'] ?>, `<?= Security::h($m['subject'] ?? '') ?>`)"><i class="bi bi-reply"></i></button>
+                                <button class="btn btn-sm btn-outline-primary" data-id="<?= $m['id'] ?>" data-subject="<?= Security::h($m['subject'] ?? '') ?>"><i class="bi bi-reply"></i></button>
                             </td>
                         </tr>
                         <?php endforeach; ?>
@@ -164,4 +164,21 @@ function repondre(id, subject) {
     document.getElementById('composeSubject').value = 'Re: ' + subject;
     new bootstrap.Modal(document.getElementById('composeModal')).show();
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('btnShowCompose').addEventListener('click', showCompose);
+
+    document.querySelectorAll('a[data-body]').forEach(function(el) {
+        el.addEventListener('click', function(e) {
+            e.preventDefault();
+            viewMessage(this.dataset.id, this.dataset.subject, this.dataset.body, this.dataset.sender);
+        });
+    });
+
+    document.querySelectorAll('button[data-subject]').forEach(function(el) {
+        el.addEventListener('click', function() {
+            repondre(this.dataset.id, this.dataset.subject);
+        });
+    });
+});
 </script>
