@@ -281,7 +281,7 @@ $journal = db()->fetchAll("SELECT j.*, u.username FROM journal_activite j LEFT J
     <input type="hidden" name="id" id="deleteId">
 </form>
 
-<script>
+<script <?= nonce_attr() ?>>
 <?php
 $userData = array_map(function($u) {
     return [

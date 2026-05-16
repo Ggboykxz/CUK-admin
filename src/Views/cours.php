@@ -196,7 +196,7 @@ foreach ($cours as $c) {
     </div>
 </div>
 
-<script>
+<script <?= nonce_attr() ?>>
 function viewCours(id, code, nom, enseignant, salle, debut, fin, type) {
     document.getElementById('viewCoursTitle').textContent = code + ' - ' + nom;
     document.getElementById('viewCoursBody').innerHTML = '<table class="table table-sm"><tr><th>Enseignant:</th><td>' + enseignant + '</td></tr><tr><th>Salle:</th><td>' + salle + '</td></tr><tr><th>Horaire:</th><td>' + debut + ' - ' + fin + '</td></tr><tr><th>Type:</th><td>' + type + '</td></tr></table>';

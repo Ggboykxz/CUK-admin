@@ -279,7 +279,7 @@ $statsIncidents = [
     <input type="hidden" name="id" id="cloturerId">
 </form>
 
-<script>
+<script <?= nonce_attr() ?>>
 <?php
 $incidentData = array_map(function($i) {
     return [

@@ -110,7 +110,7 @@ $evolutionNotes = db()->fetchAll("SELECT CAST(strftime('%m', n.date_saisie) AS I
     </div>
 </div>
 
-<script>
+<script <?= nonce_attr() ?>>
 document.addEventListener('DOMContentLoaded', function() {
     new Chart(document.getElementById('chartFilieres'), {
         type: 'doughnut',

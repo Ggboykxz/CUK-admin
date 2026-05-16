@@ -366,7 +366,7 @@ $etudiants = db()->fetchAll("SELECT e.id, e.numero, e.nom, e.prenom, f.nom as fi
     </div>
 </div>
 
-<script>
+<script <?= nonce_attr() ?>>
 const ecsCache = {};
 
 document.getElementById('etudiantSelect').addEventListener('change', function() {

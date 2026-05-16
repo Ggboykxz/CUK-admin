@@ -303,7 +303,7 @@ $statsAbsences = [
     <input type="hidden" name="id" id="supprimerId">
 </form>
 
-<script>
+<script <?= nonce_attr() ?>>
 document.addEventListener('DOMContentLoaded', function() {
     $('#absencesTable').DataTable({
         language: { url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/fr-FR.json' },

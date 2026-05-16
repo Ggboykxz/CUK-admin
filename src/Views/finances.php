@@ -187,7 +187,7 @@ $frais = db()->fetchAll(
     </div>
 </div>
 
-<script>
+<script <?= nonce_attr() ?>>
 function payer(id, total, paye) {
     document.getElementById('payerFraisId').value = id;
     var reste = total - paye;

@@ -151,7 +151,7 @@ if ($action === 'inbox') {
     </div>
 </div>
 
-<script>
+<script <?= nonce_attr() ?>>
 function showCompose() { new bootstrap.Modal(document.getElementById('composeModal')).show(); }
 function viewMessage(id, subject, body, sender) {
     document.getElementById('viewSubject').textContent = subject;

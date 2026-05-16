@@ -33,7 +33,7 @@
 }
 </style>
 
-<script>
+<script <?= nonce_attr() ?>>
 document.addEventListener('DOMContentLoaded', function() {
     var searchInput = document.getElementById('globalSearch');
     var searchResults = document.getElementById('searchResults');

@@ -285,7 +285,7 @@ $is2faActive = !empty($user2fa['twofa_actif']);
     </div>
 </div>
 
-<script>
+<script <?= nonce_attr() ?>>
 // === BACKUP ===
 function chargerBackups() {
     fetch('../api/backup.php?action=list')

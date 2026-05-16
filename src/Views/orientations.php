@@ -231,7 +231,7 @@ $orientations = db()->fetchAll("SELECT o.*, e.numero, e.nom, e.prenom, fo.nom as
     </div>
 </div>
 
-<script>
+<script <?= nonce_attr() ?>>
 function deciderOrientation(id) {
     document.getElementById('deciderId').value = id;
     new bootstrap.Modal(document.getElementById('deciderModal')).show();

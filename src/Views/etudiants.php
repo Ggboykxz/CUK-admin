@@ -346,7 +346,7 @@ $etudiants = db()->fetchAll("SELECT e.*, f.nom as filiere, f.code as filiere_cod
 
 
 
-<script>
+<script <?= nonce_attr() ?>>
 <?php
 $filiereData = [];
 foreach ($filieres as $f) {
