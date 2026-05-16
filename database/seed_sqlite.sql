@@ -162,3 +162,29 @@ INSERT INTO absences (etudiant_id, ec_id, annee_academique_id, date_absence, nom
 INSERT INTO notifications (user_id, type, titre, message) VALUES
 (1, 'info', 'Bienvenue sur CUK-Admin', 'Bienvenue sur le systeme de gestion du CUK.'),
 (2, 'info', 'Inscriptions ouvertes', 'Les inscriptions 2025-2026 sont ouvertes.');
+
+-- Salles
+INSERT INTO salles (code, nom, capacite, batiment, etage, active) VALUES
+('A101', 'Amphitheatre A', 150, 'Batiment A', 1, 1),
+('A102', 'Salle A102', 50, 'Batiment A', 1, 1),
+('B201', 'Salle B201', 40, 'Batiment B', 2, 1),
+('B202', 'Salle B202', 40, 'Batiment B', 2, 1),
+('TP-CHIMIE', 'Labo Chimie', 25, 'Batiment C', 1, 1),
+('TP-INFO', 'Labo Informatique', 30, 'Batiment C', 1, 1);
+
+-- Cours
+INSERT INTO cours (ec_id, enseignant_id, salle, jour_semaine, heure_debut, heure_fin, type_seance, semestre, annee_academique_id) VALUES
+(20, 1, 'TP-INFO', 1, '08:00', '10:00', 'TP', 'S1', 2),
+(23, 1, 'A102', 2, '10:00', '12:00', 'CM', 'S1', 2),
+(28, 4, 'TP-CHIMIE', 3, '14:00', '16:00', 'TP', 'S1', 2);
+
+-- Messages internes
+INSERT INTO messages (sender_id, recipient_id, subject, body, read_at) VALUES
+(1, 2, 'Bienvenue', 'Bienvenue sur le systeme de messagerie CUK-Admin.', NULL),
+(2, 1, 'Question inscription', 'Bonjour, pourriez-vous verifier le dossier de l etudiant Nguema Sonia ?', NULL);
+
+-- Frais de scolarite
+INSERT INTO frais_scolarite (etudiant_id, annee_academique_id, montant_total, montant_paye, statut, echeance) VALUES
+(1, 2, 250000.00, 250000.00, 'paye', '2025-12-31'),
+(2, 2, 250000.00, 125000.00, 'partiel', '2025-12-31'),
+(3, 2, 250000.00, 0.00, 'impaye', '2025-12-31');

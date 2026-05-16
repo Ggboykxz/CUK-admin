@@ -14,6 +14,7 @@ if (isset($_GET['action'])) {
     $action = $_GET['action'];
 
     if ($action === 'saveNote') {
+        ob_clean();
         header('Content-Type: application/json');
         $etudiantId = Security::validateInt($_POST['etudiant_id']);
         $ecId = Security::validateInt($_POST['ec_id']);
@@ -58,6 +59,7 @@ if (isset($_GET['action'])) {
     }
 
     if ($action === 'calculerSemestre') {
+        ob_clean();
         header('Content-Type: application/json');
         $etudiantId = Security::validateInt($_POST['etudiant_id']);
         $anneeId = Security::validateInt($_POST['annee_academique_id']);
@@ -170,6 +172,7 @@ if (isset($_GET['action'])) {
     }
 
     if ($action === 'get_ecs') {
+        ob_clean();
         header('Content-Type: application/json');
         $etudiantId = Security::validateInt($_GET['etudiant_id']);
         $semestre = Security::validateEnum($_GET['semestre'] ?? '', ['S1', 'S2', 'S3', 'S4'], 'S1');
@@ -186,6 +189,7 @@ if (isset($_GET['action'])) {
     }
 
     if ($action === 'get_note') {
+        ob_clean();
         header('Content-Type: application/json');
         $etudiantId = Security::validateInt($_GET['etudiant_id']);
         $ecId = Security::validateInt($_GET['ec_id']);

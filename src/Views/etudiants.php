@@ -13,6 +13,7 @@ $filieres = db()->fetchAll("SELECT f.*, i.nom as institut_nom, i.sigle as instit
 
 if (isset($_GET['action']) && $_GET['action'] === 'get') {
     Security::requireAuth();
+    ob_clean();
     header('Content-Type: application/json');
     $id = Security::validateInt($_GET['id']);
     $etudiant = db()->fetch("SELECT e.*, f.nom as filiere, f.code as filiere_code, i.sigle as institut, i.nom as institut_nom FROM etudiants e JOIN filieres f ON e.filiere_id = f.id JOIN instituts i ON f.institut_id = i.id WHERE e.id = ?", [$id]);

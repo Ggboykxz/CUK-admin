@@ -39,6 +39,7 @@ class Database
             $this->connection = new \PDO('sqlite:' . $resolved);
             $this->connection->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
             $this->connection->exec('PRAGMA foreign_keys = ON');
+            $this->autoInitialize();
         }
     }
 
@@ -151,6 +152,27 @@ class Database
             throw new \InvalidArgumentException("Nom de colonne invalide: {$name}");
         }
         return $this->driver === 'mysql' ? "`{$name}`" : "\"{$name}\"";
+    }
+
+    private function autoInitialize(): void
+    {
+        try {
+            $count = $this->connection->query("SELECT COUNT(*) FROM sqlite_master WHERE type='table'")->fetchColumn();
+            if ((int)$count === 0) {
+                $schemaFile = __DIR__ . '/../database/schema_sqlite.sql';
+                $seedFile = __DIR__ . '/../database/seed_sqlite.sql';
+                if (file_exists($schemaFile)) {
+                    $this->connection->exec('PRAGMA foreign_keys = OFF');
+                    $this->connection->exec(file_get_contents($schemaFile));
+                    if (file_exists($seedFile)) {
+                        $this->connection->exec(file_get_contents($seedFile));
+                    }
+                    $this->connection->exec('PRAGMA foreign_keys = ON');
+                }
+            }
+        } catch (\Throwable $e) {
+            // Silently fail - will be caught by the caller
+        }
     }
 
     private function convertMysqlToSqlite(string $sql): string
